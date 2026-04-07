@@ -1,5 +1,7 @@
 import { createBrowserRouter } from "react-router";
 import { Layout } from "./components/layout";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { Login } from "./pages/login";
 import { Dashboard } from "./pages/dashboard";
 import { FIAPIndex } from "./pages/fiap/index";
 import { Aulas } from "./pages/fiap/aulas";
@@ -27,8 +29,16 @@ import { NotFound } from "./pages/not-found";
 
 export const router = createBrowserRouter([
   {
+    path: "/login",
+    Component: Login,
+  },
+  {
     path: "/",
-    Component: Layout,
+    element: (
+      <ProtectedRoute>
+        <Layout />
+      </ProtectedRoute>
+    ),
     children: [
       { index: true, Component: Dashboard },
       { path: "perfil", Component: Perfil },

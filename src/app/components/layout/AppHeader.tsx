@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router';
 import { useAppStore } from '../../../stores/useAppStore';
-import { Search, Bell, User, GraduationCap, Building2 } from 'lucide-react';
+import { useAuth } from '../../../lib/auth-context';
+import { Search, Bell, User, GraduationCap, Building2, LogOut, Settings } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Avatar, AvatarFallback } from '../ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,16 +24,39 @@ import { mockNotifications } from '../../../lib/mockData';
 import { getInitials, formatDateTime } from '../../../lib/utils';
 import { ScrollArea } from '../ui/scroll-area';
 import { cn } from '../../../lib/utils';
+import { toast } from 'sonner';
 
 export default function AppHeader() {
-  const { contextMode, setContextMode, user } = useAppStore();
+  const navigate = useNavigate();
+  const { contextMode, setContextMode, user: storeUser } = useAppStore();
+  const { user: firebaseUser, logout } = useAuth();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const unreadNotifications = mockNotifications.filter((n) => !n.read);
 
+  // Use Firebase user if available, otherwise use store user
+  const displayUser = firebaseUser 
+    ? { 
+        name: firebaseUser.displayName || 'Usuário', 
+        role: 'Professor / Analista',
+        photoURL: firebaseUser.photoURL 
+      }
+    : storeUser;
+
   const handleContextSwitch = (mode: 'fiap' | 'itau') => {
     setContextMode(mode);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success('Logout realizado com sucesso!');
+      navigate('/login');
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+      toast.error('Erro ao fazer logout');
+    }
   };
 
   return (
@@ -161,26 +186,37 @@ export default function AppHeader() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="gap-2 px-2">
               <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary text-primary-foreground">
-                  {user ? getInitials(user.name) : 'U'}
-                </AvatarFallback>
+                {displayUser.photoURL ? (
+                  <AvatarImage src={displayUser.photoURL} />
+                ) : (
+                  <AvatarFallback className="bg-primary text-primary-foreground">
+                    {displayUser ? getInitials(displayUser.name) : 'U'}
+                  </AvatarFallback>
+                )}
               </Avatar>
               <div className="text-left hidden lg:block">
-                <p className="text-sm font-medium">{user?.name}</p>
-                <p className="text-xs text-muted-foreground">{user?.role}</p>
+                <p className="text-sm font-medium">{displayUser?.name}</p>
+                <p className="text-xs text-muted-foreground">{displayUser?.role}</p>
               </div>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/perfil')}>
               <User className="mr-2 h-4 w-4" />
               Perfil
             </DropdownMenuItem>
-            <DropdownMenuItem>Configurações</DropdownMenuItem>
+            <DropdownMenuItem>
+              <Settings className="mr-2 h-4 w-4" />
+              Configurações
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">
+            <DropdownMenuItem 
+              className="text-destructive focus:text-destructive" 
+              onClick={handleLogout}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
               Sair
             </DropdownMenuItem>
           </DropdownMenuContent>

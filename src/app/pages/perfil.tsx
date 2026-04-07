@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { ArrowLeft, User, Mail, Phone, MapPin, Briefcase, Calendar, Shield, Bell, Palette } from 'lucide-react';
+import { ArrowLeft, User, Mail, Phone, MapPin, Briefcase, Calendar, Shield, Bell, Palette, LogOut, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -10,18 +10,27 @@ import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Switch } from '../components/ui/switch';
 import { Separator } from '../components/ui/separator';
 import { useTheme } from '../../lib/theme-context';
+import { useAuth } from '../../lib/auth-context';
 import { AvatarUploadDialog } from '../components/AvatarUploadDialog';
+import { toast } from 'sonner';
 
 export function Perfil() {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+  const { user: firebaseUser, updateUserProfile, logout } = useAuth();
   
   const [avatarUrl, setAvatarUrl] = useState('https://api.dicebear.com/7.x/avataaars/svg?seed=Felix');
   const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
+
+  useEffect(() => {
+    if (firebaseUser?.photoURL) {
+      setAvatarUrl(firebaseUser.photoURL);
+    }
+  }, [firebaseUser]);
   
   const [formData, setFormData] = useState({
-    nome: 'João Silva',
-    email: 'joao.silva@email.com',
+    nome: firebaseUser?.displayName || 'João Silva',
+    email: firebaseUser?.email || 'joao.silva@email.com',
     telefone: '(11) 98765-4321',
     cargo: 'Professor / Analista Sênior',
     departamentoFIAP: 'Tecnologia da Informação',
@@ -33,6 +42,30 @@ export function Perfil() {
     bio: 'Profissional híbrido atuando na área de tecnologia e educação.',
     dataNascimento: '1990-05-15',
   });
+
+  // Atualizar formData quando o Firebase user mudar
+  useEffect(() => {
+    if (firebaseUser) {
+      setFormData(prev => ({
+        ...prev,
+        nome: firebaseUser.displayName || prev.nome,
+        email: firebaseUser.email || prev.email,
+      }));
+    }
+  }, [firebaseUser]);
+
+  const handleAvatarChange = async (newAvatarUrl: string) => {
+    setAvatarUrl(newAvatarUrl);
+    
+    // Atualizar no Firebase
+    try {
+      await updateUserProfile(formData.nome, newAvatarUrl);
+      toast.success('Foto de perfil atualizada!');
+    } catch (error) {
+      console.error('Erro ao atualizar foto:', error);
+      toast.error('Erro ao atualizar foto de perfil');
+    }
+  };
 
   const [configuracoes, setConfiguracoes] = useState({
     notificacoesEmail: true,
@@ -55,6 +88,17 @@ export function Perfil() {
     // Aqui você adicionaria a lógica para salvar as configurações
     console.log('Configurações atualizadas:', configuracoes);
     alert('Configurações atualizadas com sucesso!');
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success('Logout realizado com sucesso!');
+      navigate('/login');
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+      toast.error('Erro ao fazer logout');
+    }
   };
 
   return (
@@ -460,11 +504,58 @@ export function Perfil() {
         </div>
       </form>
 
+      {/* Zona de Perigo */}
+      <Separator className="my-8" />
+      
+      <Card className="border-destructive">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-destructive">
+            <AlertTriangle className="w-5 h-5" />
+            Zona de Perigo
+          </CardTitle>
+          <CardDescription>Ações irreversíveis e de segurança</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 border border-destructive/20 rounded-lg bg-destructive/5">
+            <div className="space-y-1">
+              <div className="font-medium text-[var(--theme-foreground)]">Encerrar Sessão</div>
+              <p className="text-sm text-[var(--theme-muted-foreground)]">
+                Sair da sua conta e encerrar a sessão atual
+              </p>
+            </div>
+            <Button 
+              variant="destructive" 
+              onClick={handleLogout}
+              className="gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              Sair da Conta
+            </Button>
+          </div>
+
+          <div className="flex items-center justify-between p-4 border border-destructive/20 rounded-lg bg-destructive/5">
+            <div className="space-y-1">
+              <div className="font-medium text-destructive">Excluir Conta</div>
+              <p className="text-sm text-[var(--theme-muted-foreground)]">
+                Deletar permanentemente sua conta e todos os dados associados
+              </p>
+            </div>
+            <Button 
+              variant="outline" 
+              className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
+              onClick={() => toast.error('Funcionalidade em desenvolvimento')}
+            >
+              Excluir Conta
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <AvatarUploadDialog
         open={isAvatarDialogOpen}
         onOpenChange={setIsAvatarDialogOpen}
         currentAvatar={avatarUrl}
-        onAvatarChange={setAvatarUrl}
+        onAvatarChange={handleAvatarChange}
         fallback="JS"
       />
     </div>

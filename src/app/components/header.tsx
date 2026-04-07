@@ -33,9 +33,9 @@ export function Header() {
                 color: theme === 'itau' ? '#FFFFFF' : undefined
               }}
             >
-              D
+              T
             </div>
-            <span className="font-bold text-[var(--theme-foreground)] hidden sm:block">DualOS</span>
+            <span className="font-bold text-[var(--theme-foreground)] hidden sm:block">TaskOS</span>
           </div>
 
           {/* Actions */}

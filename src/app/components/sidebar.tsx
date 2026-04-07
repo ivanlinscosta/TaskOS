@@ -79,9 +79,9 @@ export function Sidebar() {
                   color: theme === 'itau' ? '#FFFFFF' : undefined
                 }}
               >
-                D
+                T
               </div>
-              <span className="font-bold text-[var(--theme-foreground)]">DualOS</span>
+              <span className="font-bold text-[var(--theme-foreground)]">TaskOS</span>
             </div>
           )}
           <button
