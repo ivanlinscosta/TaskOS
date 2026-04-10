@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, BookOpen, CalendarDays, ClipboardList, MessageSquare } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -24,51 +24,53 @@ export function NovaAvaliacao() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Aqui você integraria com Firebase/backend
     console.log('Nova avaliação:', { alunoId: id, ...formData });
     navigate('/fiap/alunos');
   };
 
   return (
-    <div className="p-4 space-y-4">
-      {/* Header */}
+    <div className="p-4 space-y-5">
       <div className="flex items-center gap-3">
         <Button
           variant="ghost"
           size="icon"
           onClick={() => navigate('/fiap/alunos')}
-          className="h-8 w-8"
+          className="h-9 w-9 rounded-full"
         >
           <ArrowLeft className="w-4 h-4" />
         </Button>
+
         <div>
-          <h1 className="text-xl font-bold text-[var(--theme-foreground)]">
-            Nova Avaliação
-          </h1>
-          <p className="text-xs text-[var(--theme-muted-foreground)]">
+          <h1 className="text-2xl font-bold text-[var(--theme-foreground)]">Nova Avaliação</h1>
+          <p className="text-sm text-[var(--theme-muted-foreground)]">
             {aluno ? `Registrar avaliação para ${aluno.nome}` : 'Carregando...'}
           </p>
         </div>
       </div>
 
-      {/* Form */}
-      <Card>
+      <Card className="overflow-hidden rounded-[28px] border border-[var(--theme-border)] bg-gradient-to-b from-[var(--theme-card)] to-[var(--theme-background-secondary)]">
+        <div className="h-2 bg-gradient-to-r from-[var(--theme-accent)] to-blue-400" />
+
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Dados da Avaliação</CardTitle>
+          <CardTitle className="text-lg">Dados da Avaliação</CardTitle>
         </CardHeader>
+
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="disciplina" className="text-sm">Disciplina *</Label>
-                <Input
-                  id="disciplina"
-                  value={formData.disciplina}
-                  onChange={(e) => setFormData({ ...formData, disciplina: e.target.value })}
-                  placeholder="Ex: Machine Learning"
-                  required
-                  className="h-9 text-sm"
-                />
+                <div className="relative">
+                  <BookOpen className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--theme-accent)]" />
+                  <Input
+                    id="disciplina"
+                    value={formData.disciplina}
+                    onChange={(e) => setFormData({ ...formData, disciplina: e.target.value })}
+                    placeholder="Ex: Machine Learning"
+                    required
+                    className="h-10 rounded-xl pl-10 text-sm"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -78,7 +80,7 @@ export function NovaAvaliacao() {
                   onValueChange={(value) => setFormData({ ...formData, tipo: value })}
                   required
                 >
-                  <SelectTrigger className="h-9 text-sm">
+                  <SelectTrigger className="h-10 rounded-xl text-sm">
                     <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
                   <SelectContent>
@@ -95,52 +97,63 @@ export function NovaAvaliacao() {
 
               <div className="space-y-2">
                 <Label htmlFor="nota" className="text-sm">Nota (0-10) *</Label>
-                <Input
-                  id="nota"
-                  type="number"
-                  min="0"
-                  max="10"
-                  step="0.1"
-                  value={formData.nota}
-                  onChange={(e) => setFormData({ ...formData, nota: e.target.value })}
-                  required
-                  className="h-9 text-sm"
-                />
+                <div className="relative">
+                  <ClipboardList className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--theme-accent)]" />
+                  <Input
+                    id="nota"
+                    type="number"
+                    min="0"
+                    max="10"
+                    step="0.1"
+                    value={formData.nota}
+                    onChange={(e) => setFormData({ ...formData, nota: e.target.value })}
+                    required
+                    className="h-10 rounded-xl pl-10 text-sm"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="data" className="text-sm">Data *</Label>
-                <Input
-                  id="data"
-                  type="date"
-                  value={formData.data}
-                  onChange={(e) => setFormData({ ...formData, data: e.target.value })}
-                  required
-                  className="h-9 text-sm"
-                />
+                <div className="relative">
+                  <CalendarDays className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--theme-accent)]" />
+                  <Input
+                    id="data"
+                    type="date"
+                    value={formData.data}
+                    onChange={(e) => setFormData({ ...formData, data: e.target.value })}
+                    required
+                    className="h-10 rounded-xl pl-10 text-sm"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="comentario" className="text-sm">Comentários/Observações</Label>
-                <Textarea
-                  id="comentario"
-                  value={formData.comentario}
-                  onChange={(e) => setFormData({ ...formData, comentario: e.target.value })}
-                  placeholder="Comentários sobre o desempenho do aluno nesta avaliação"
-                  rows={4}
-                  className="text-sm"
-                />
+                <div className="relative">
+                  <MessageSquare className="absolute left-3 top-3 h-4 w-4 text-[var(--theme-accent)]" />
+                  <Textarea
+                    id="comentario"
+                    value={formData.comentario}
+                    onChange={(e) => setFormData({ ...formData, comentario: e.target.value })}
+                    placeholder="Comentários sobre o desempenho do aluno nesta avaliação"
+                    rows={5}
+                    className="rounded-xl pl-10 text-sm"
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="flex gap-2 pt-2">
-              <Button type="submit" variant="theme" className="gap-2">
+            <div className="flex gap-3 pt-2">
+              <Button type="submit" variant="theme" className="gap-2 rounded-xl">
                 <Save className="w-4 h-4" />
                 Salvar Avaliação
               </Button>
+
               <Button
                 type="button"
                 variant="outline"
+                className="rounded-xl"
                 onClick={() => navigate('/fiap/alunos')}
               >
                 Cancelar

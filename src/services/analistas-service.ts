@@ -1,6 +1,7 @@
 /**
  * Serviço de Analistas - Firebase Integration Completo
  * Queries simplificadas (sem orderBy no Firestore) para evitar necessidade de índice
+ * Suporte a foto via Firebase Storage, mantendo as regras atuais do Firestore
  */
 
 import {
@@ -15,7 +16,13 @@ import {
   where,
   Timestamp,
 } from 'firebase/firestore';
-import { db } from '../lib/firebase-config';
+import {
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject,
+} from 'firebase/storage';
+import { db, storage } from '../lib/firebase-config';
 
 export interface Analista {
   id?: string;
@@ -27,6 +34,7 @@ export interface Analista {
   senioridade?: string;
   salario?: number;
   foto?: string;
+  fotoPath?: string;
   dataAdmissao?: Date;
   dataNascimento?: Date;
   endereco?: string;
@@ -34,7 +42,13 @@ export interface Analista {
   estado?: string;
   cep?: string;
   skills?: string[];
-  avaliacoes?: Array<{ id: string; data: Date; nota: number; comentario: string; tipo: string }>;
+  avaliacoes?: Array<{
+    id: string;
+    data: Date;
+    nota: number;
+    comentario: string;
+    tipo: string;
+  }>;
   observacoes?: string;
   criadoEm?: Date;
   atualizadoEm?: Date;
@@ -42,15 +56,36 @@ export interface Analista {
 
 const COLLECTION_NAME = 'analistas';
 
+function mapFirestoreToAnalista(id: string, data: any): Analista {
+  return {
+    id,
+    ...data,
+    foto: data.foto || '',
+    fotoPath: data.fotoPath || '',
+    dataAdmissao: data.dataAdmissao?.toDate?.() || undefined,
+    dataNascimento: data.dataNascimento?.toDate?.() || undefined,
+    criadoEm: data.criadoEm?.toDate?.() || new Date(),
+    atualizadoEm: data.atualizadoEm?.toDate?.() || new Date(),
+    avaliacoes: (data.avaliacoes || []).map((av: any) => ({
+      ...av,
+      data: av.data?.toDate?.() || new Date(),
+    })),
+  } as Analista;
+}
+
 /**
  * Cria um novo analista no Firebase
  */
-export async function criarAnalista(analista: Omit<Analista, 'id' | 'criadoEm' | 'atualizadoEm'>): Promise<string> {
+export async function criarAnalista(
+  analista: Omit<Analista, 'id' | 'criadoEm' | 'atualizadoEm'>
+): Promise<string> {
   try {
     const analistaData: any = {
       ...analista,
       avaliacoes: analista.avaliacoes || [],
       skills: analista.skills || [],
+      foto: analista.foto || '',
+      fotoPath: analista.fotoPath || '',
       criadoEm: Timestamp.now(),
       atualizadoEm: Timestamp.now(),
     };
@@ -95,10 +130,78 @@ export async function atualizarAnalista(id: string, analista: Partial<Analista>)
 }
 
 /**
+ * Faz upload da foto do analista no Firebase Storage
+ * e salva a URL no documento do Firestore
+ */
+export async function uploadFotoAnalista(
+  id: string,
+  file: File
+): Promise<{ foto: string; fotoPath: string }> {
+  try {
+    const extensao = file.name.split('.').pop() || 'jpg';
+    const fotoPath = `analistas/${id}/perfil.${extensao}`;
+    const storageRef = ref(storage, fotoPath);
+
+    await uploadBytes(storageRef, file, {
+      contentType: file.type || 'image/jpeg',
+    });
+
+    const foto = await getDownloadURL(storageRef);
+
+    await updateDoc(doc(db, COLLECTION_NAME, id), {
+      foto,
+      fotoPath,
+      atualizadoEm: Timestamp.now(),
+    });
+
+    return { foto, fotoPath };
+  } catch (error) {
+    console.error('Erro ao fazer upload da foto do analista:', error);
+    throw error;
+  }
+}
+
+/**
+ * Remove a foto do analista
+ */
+export async function removerFotoAnalista(id: string): Promise<void> {
+  try {
+    const analista = await buscarAnalistaPorId(id);
+
+    if (analista?.fotoPath) {
+      try {
+        await deleteObject(ref(storage, analista.fotoPath));
+      } catch (error) {
+        console.warn('Arquivo da foto não encontrado ou já removido:', error);
+      }
+    }
+
+    await updateDoc(doc(db, COLLECTION_NAME, id), {
+      foto: '',
+      fotoPath: '',
+      atualizadoEm: Timestamp.now(),
+    });
+  } catch (error) {
+    console.error('Erro ao remover foto do analista:', error);
+    throw error;
+  }
+}
+
+/**
  * Deleta um analista
  */
 export async function deletarAnalista(id: string): Promise<void> {
   try {
+    const analista = await buscarAnalistaPorId(id);
+
+    if (analista?.fotoPath) {
+      try {
+        await deleteObject(ref(storage, analista.fotoPath));
+      } catch (error) {
+        console.warn('Não foi possível remover a foto ao deletar analista:', error);
+      }
+    }
+
     await deleteDoc(doc(db, COLLECTION_NAME, id));
   } catch (error) {
     console.error('Erro ao deletar analista:', error);
@@ -114,19 +217,7 @@ export async function buscarAnalistaPorId(id: string): Promise<Analista | null> 
     const docSnap = await getDoc(doc(db, COLLECTION_NAME, id));
 
     if (docSnap.exists()) {
-      const data = docSnap.data();
-      return {
-        id: docSnap.id,
-        ...data,
-        dataAdmissao: data.dataAdmissao?.toDate?.() || undefined,
-        dataNascimento: data.dataNascimento?.toDate?.() || undefined,
-        criadoEm: data.criadoEm?.toDate?.() || new Date(),
-        atualizadoEm: data.atualizadoEm?.toDate?.() || new Date(),
-        avaliacoes: (data.avaliacoes || []).map((av: any) => ({
-          ...av,
-          data: av.data?.toDate?.() || new Date(),
-        })),
-      } as Analista;
+      return mapFirestoreToAnalista(docSnap.id, docSnap.data());
     }
 
     return null;
@@ -139,36 +230,23 @@ export async function buscarAnalistaPorId(id: string): Promise<Analista | null> 
 /**
  * Lista todos os analistas (sem orderBy para evitar necessidade de índice)
  */
-export async function listarAnalistas(filtros?: { funcao?: string; squad?: string }): Promise<Analista[]> {
+export async function listarAnalistas(
+  filtros?: { funcao?: string; squad?: string }
+): Promise<Analista[]> {
   try {
-    // Query simples sem orderBy - ordena no client-side
     const snapshot = await getDocs(collection(db, COLLECTION_NAME));
 
-    let analistas = snapshot.docs.map((d) => {
-      const data = d.data();
-      return {
-        id: d.id,
-        ...data,
-        dataAdmissao: data.dataAdmissao?.toDate?.() || undefined,
-        dataNascimento: data.dataNascimento?.toDate?.() || undefined,
-        criadoEm: data.criadoEm?.toDate?.() || new Date(),
-        atualizadoEm: data.atualizadoEm?.toDate?.() || new Date(),
-        avaliacoes: (data.avaliacoes || []).map((av: any) => ({
-          ...av,
-          data: av.data?.toDate?.() || new Date(),
-        })),
-      } as Analista;
-    });
+    let analistas = snapshot.docs.map((d) =>
+      mapFirestoreToAnalista(d.id, d.data())
+    );
 
-    // Filtrar no client-side
     if (filtros?.funcao) {
-      analistas = analistas.filter(a => a.funcao === filtros.funcao);
+      analistas = analistas.filter((a) => a.funcao === filtros.funcao);
     }
     if (filtros?.squad) {
-      analistas = analistas.filter(a => a.squad === filtros.squad);
+      analistas = analistas.filter((a) => a.squad === filtros.squad);
     }
 
-    // Ordenar no client-side
     analistas.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
 
     return analistas;
@@ -196,16 +274,7 @@ export async function buscarAnalistaPorEmail(email: string): Promise<Analista | 
     if (snapshot.empty) return null;
 
     const docItem = snapshot.docs[0];
-    const data = docItem.data();
-
-    return {
-      id: docItem.id,
-      ...data,
-      dataAdmissao: data.dataAdmissao?.toDate?.() || undefined,
-      dataNascimento: data.dataNascimento?.toDate?.() || undefined,
-      criadoEm: data.criadoEm?.toDate?.() || new Date(),
-      atualizadoEm: data.atualizadoEm?.toDate?.() || new Date(),
-    } as Analista;
+    return mapFirestoreToAnalista(docItem.id, docItem.data());
   } catch (error) {
     console.error('Erro ao buscar analista por email:', error);
     throw error;

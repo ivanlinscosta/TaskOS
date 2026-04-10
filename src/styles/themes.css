@@ -20,20 +20,20 @@
 
 /* Tema FIAP (Education Mode - Dark) */
 .theme-fiap {
-  --theme-primary: #6A0DAD;
+ --theme-primary: #6A0DAD;
   --theme-secondary: #8B2FCF;
-  --theme-background: #000000;
-  --theme-background-secondary: #0A0A0A;
-  --theme-foreground: #FFFFFF;
-  --theme-card: #0F0F0F;
-  --theme-card-foreground: #FFFFFF;
-  --theme-border: rgba(106, 13, 173, 0.3);
-  --theme-muted: #1A1A1A;
-  --theme-muted-foreground: #A0A0A0;
-  --theme-accent: #6A0DAD;
+  --theme-background: #FFFFFF;
+  --theme-background-secondary: #F5F5F5;
+  --theme-foreground: #1A1A1A;
+  --theme-card: #FFFFFF;
+  --theme-card-foreground: #1A1A1A;
+  --theme-border: rgba(0, 0, 0, 0.1);
+  --theme-muted: #E0E0E0;
+  --theme-muted-foreground: #666666;
+  --theme-accent: #8B2FCF;
   --theme-accent-foreground: #FFFFFF;
-  --theme-glow: rgba(106, 13, 173, 0.5);
-  --theme-hover: rgba(106, 13, 173, 0.15);
+  --theme-glow: rgba(236, 112, 0, 0);
+  --theme-hover: rgba(236, 112, 0, 0.08);
 }
 
 /* Glow effects para FIAP */

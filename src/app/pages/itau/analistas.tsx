@@ -1,15 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { Plus, Search, Mail, Briefcase, Pencil, Star, Loader } from 'lucide-react';
-import { Card, CardContent } from '../../components/ui/card';
+import { Plus, Search, Loader, Star, Users, Clock3 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
-import { Badge } from '../../components/ui/badge';
 import { Dialog, DialogTrigger } from '../../components/ui/dialog';
 import { toast } from 'sonner';
 import * as analistasService from '../../../services/analistas-service';
 import { mockAnalistas } from '../../../lib/mock-data';
+import { PersonSummaryCard } from '../../components/ui/person-summary-card';
 
 export function Analistas() {
   const navigate = useNavigate();
@@ -68,15 +66,14 @@ export function Analistas() {
   };
 
   return (
-    <div className="p-4 space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-5 p-4">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-[var(--theme-foreground)]">Gestão de Analistas</h1>
-          <p className="text-xs text-[var(--theme-muted-foreground)] mt-0.5">
+          <h1 className="text-2xl font-bold text-[var(--theme-foreground)]">Gestão de Analistas</h1>
+          <p className="mt-1 text-sm text-[var(--theme-muted-foreground)]">
             {isLoading ? (
               <span className="flex items-center gap-2">
-                <Loader className="w-3 h-3 animate-spin" />
+                <Loader className="h-3.5 w-3.5 animate-spin" />
                 Carregando...
               </span>
             ) : (
@@ -84,118 +81,77 @@ export function Analistas() {
             )}
           </p>
         </div>
-        <Button variant="theme" size="sm" className="gap-2" onClick={() => navigate('/itau/analistas/novo')}>
+
+        <Button variant="theme" size="sm" className="gap-2 rounded-xl px-4" onClick={() => navigate('/itau/analistas/novo')}>
           <Plus className="w-4 h-4" />
           Novo Analista
         </Button>
       </div>
 
-      {/* Search */}
       <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--theme-muted-foreground)]" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--theme-muted-foreground)]" />
         <Input
           placeholder="Buscar por nome, email ou função..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-9 h-9 text-sm"
+          className="h-10 rounded-xl pl-9 text-sm"
         />
       </div>
 
-      {/* Analistas Grid */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader className="w-8 h-8 animate-spin text-[var(--theme-accent)]" />
+        <div className="flex items-center justify-center py-14">
+          <Loader className="h-8 w-8 animate-spin text-[var(--theme-accent)]" />
         </div>
       ) : filteredAnalistas.length === 0 ? (
-        <div className="text-center py-12">
+        <div className="py-14 text-center">
           <p className="text-[var(--theme-muted-foreground)]">Nenhum analista encontrado</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filteredAnalistas.map(analista => {
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {filteredAnalistas.map((analista) => {
             const mediaAvaliacoes = calcularMediaAvaliacoes(analista);
 
             return (
               <Dialog key={analista.id}>
-                <Card className="relative group overflow-hidden hover:shadow-lg transition-all">
-                  <CardContent className="p-4">
-                    {/* Edit Button */}
-                    <button
-                      onClick={(e) => {
+                <DialogTrigger asChild>
+                  <div>
+                    <PersonSummaryCard
+                      variant="analyst"
+                      name={analista.nome}
+                      email={analista.email}
+                      subtitle={analista.funcao}
+                      image={analista.foto}
+                      badgeText={analista.senioridade || 'Pleno'}
+                      highlightText={parseFloat(mediaAvaliacoes as string) >= 9 ? 'Top' : undefined}
+                      locationText={analista.squad || 'Sem squad'}
+                      description="Acompanhe avaliações, feedbacks e evolução profissional do analista."
+                      actionLabel="Registrar avaliação"
+                      onAction={() => navigate(`/itau/analistas/avaliacao/${analista.id}`)}
+                      onOpen={() => setSelectedAnalista(analista)}
+                      onEdit={(e) => {
                         e.stopPropagation();
                         navigate(`/itau/analistas/editar/${analista.id}`);
                       }}
-                      className="absolute top-3 right-3 p-1.5 rounded-lg bg-[var(--theme-background-secondary)] hover:bg-[var(--theme-accent)] hover:text-white transition-all opacity-0 group-hover:opacity-100 z-10"
-                    >
-                      <Pencil className="w-3 h-3" />
-                    </button>
-
-                    <DialogTrigger asChild>
-                      <div className="cursor-pointer" onClick={() => setSelectedAnalista(analista)}>
-                        {/* Header com Avatar */}
-                        <div className="flex items-start gap-3 mb-3">
-                          <Avatar className="h-14 w-14 border-2 border-[var(--theme-accent)]">
-                            <AvatarImage src={analista.foto} />
-                            <AvatarFallback>
-                              {analista.nome.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="text-sm font-semibold text-[var(--theme-foreground)] mb-1 truncate">
-                              {analista.nome}
-                            </h3>
-                            <div className="flex items-center gap-1 text-xs text-[var(--theme-muted-foreground)] mb-1">
-                              <Mail className="w-3 h-3 flex-shrink-0" />
-                              <span className="truncate">{analista.email}</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-xs text-[var(--theme-muted-foreground)]">
-                              <Briefcase className="w-3 h-3 flex-shrink-0" />
-                              <span className="truncate">{analista.funcao}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Métricas */}
-                        <div className="grid grid-cols-3 gap-2 mb-3">
-                          <div className="text-center p-2 rounded-lg bg-[var(--theme-background-secondary)]">
-                            <div className="text-lg font-bold text-[var(--theme-foreground)]">
-                              {mediaAvaliacoes}
-                            </div>
-                            <div className="text-[10px] text-[var(--theme-muted-foreground)]">Média</div>
-                          </div>
-                          <div className="text-center p-2 rounded-lg bg-[var(--theme-background-secondary)]">
-                            <div className="text-lg font-bold text-[var(--theme-foreground)]">
-                              {analista.squad || '-'}
-                            </div>
-                            <div className="text-[10px] text-[var(--theme-muted-foreground)]">Squad</div>
-                          </div>
-                          <div className="text-center p-2 rounded-lg bg-[var(--theme-background-secondary)]">
-                            <div className="text-lg font-bold text-[var(--theme-foreground)]">
-                              {calcularTempoEmpresa(analista.dataAdmissao)}
-                            </div>
-                            <div className="text-[10px] text-[var(--theme-muted-foreground)]">Tempo</div>
-                          </div>
-                        </div>
-
-                        {/* Status */}
-                        <div className="flex items-center justify-between">
-                          <Badge
-                            variant={parseFloat(mediaAvaliacoes) >= 8 ? 'default' : 'secondary'}
-                            className="text-[10px] px-2 py-0.5"
-                          >
-                            {analista.senioridade || 'Pleno'}
-                          </Badge>
-                          {parseFloat(mediaAvaliacoes) >= 9 && (
-                            <div className="flex items-center gap-1 text-yellow-500">
-                              <Star className="w-3 h-3 fill-yellow-500" />
-                              <span className="text-[10px] font-medium">Top</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </DialogTrigger>
-                  </CardContent>
-                </Card>
+                      metrics={[
+                        {
+                          label: 'média',
+                          value: mediaAvaliacoes,
+                          icon: <Star className="h-3.5 w-3.5" />,
+                        },
+                        {
+                          label: 'squad',
+                          value: analista.squad || '-',
+                          icon: <Users className="h-3.5 w-3.5" />,
+                        },
+                        {
+                          label: 'tempo',
+                          value: calcularTempoEmpresa(analista.dataAdmissao),
+                          icon: <Clock3 className="h-3.5 w-3.5" />,
+                        },
+                      ]}
+                    />
+                  </div>
+                </DialogTrigger>
               </Dialog>
             );
           })}
