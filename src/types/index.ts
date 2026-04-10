@@ -212,3 +212,101 @@ export interface AnalyticsDashboard {
     analistasGerenciados: number;
   };
 }
+
+// ============================================
+// English-named interfaces (used by mockData.ts and KanbanBoard)
+// ============================================
+
+export interface Student {
+  id: string;
+  name: string;
+  email: string;
+  course: string;
+  grades: { subject: string; score: number; date: Date; semester: string }[];
+  observations: string;
+  enrollmentDate: Date;
+  avatar?: string;
+}
+
+export interface Analyst {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  squad: string;
+  level: string;
+  performance: number;
+  joinDate: Date;
+  avatar?: string;
+  skills?: string[];
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  description: string;
+  status: 'backlog' | 'doing' | 'done';
+  priority: 'low' | 'medium' | 'high';
+  dueDate?: Date;
+  createdAt: Date;
+  updatedAt?: Date;
+  context: 'fiap' | 'itau';
+  tags: string[];
+  assignedTo?: string;
+  checklist: { id: string; text: string; completed: boolean }[];
+}
+
+export interface Meeting {
+  id: string;
+  title: string;
+  date: Date;
+  duration: number;
+  participants: string[];
+  notes: string;
+  actionItems: { id: string; description: string; assignedTo: string; dueDate: Date; completed: boolean }[];
+  context: 'fiap' | 'itau';
+  summary?: string;
+}
+
+export interface Lesson {
+  id: string;
+  title: string;
+  subject: string;
+  date: Date;
+  duration: number;
+  materials: { id: string; name: string; type: string; url: string; uploadedAt: Date }[];
+  tags: string[];
+  description: string;
+  studentsPresent: string[];
+}
+
+export interface DashboardMetrics {
+  efficiencyScore: number;
+  tasksCompleted: number;
+  tasksTotal: number;
+  meetingsToday: number;
+  lessonsToday: number;
+  feedbacksPending: number;
+  weeklyTrend: { day: string; score: number }[];
+}
+
+export interface AIInsight {
+  id: string;
+  type: 'warning' | 'suggestion' | 'achievement';
+  message: string;
+  priority: 'low' | 'medium' | 'high';
+  createdAt: Date;
+  actionable: boolean;
+  action?: string;
+}
+
+export interface Notification {
+  id: string;
+  type: 'meeting' | 'task' | 'lesson' | 'feedback';
+  title: string;
+  message: string;
+  read: boolean;
+  createdAt: Date;
+  actionUrl: string;
+  context: 'fiap' | 'itau';
+}

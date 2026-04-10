@@ -10,10 +10,28 @@ import {
   sendPasswordResetEmail,
   updateProfile,
 } from 'firebase/auth';
-import { auth } from './firebase-config';
+import { auth, db } from './firebase-config';
+import { doc, getDoc, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
+
+interface UserProfile {
+  nome: string;
+  email: string;
+  telefone?: string;
+  cargo?: string;
+  departamentoFIAP?: string;
+  departamentoItau?: string;
+  endereco?: string;
+  cidade?: string;
+  estado?: string;
+  cep?: string;
+  bio?: string;
+  dataNascimento?: string;
+  avatar?: string;
+}
 
 interface AuthContextType {
   user: User | null;
+  userProfile: UserProfile | null;
   loading: boolean;
   signup: (email: string, password: string, displayName: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
@@ -21,6 +39,8 @@ interface AuthContextType {
   loginWithGoogle: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateUserProfile: (displayName: string, photoURL?: string) => Promise<void>;
+  updateUserProfileData: (data: Partial<UserProfile>) => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,29 +53,75 @@ export function useAuth() {
   return context;
 }
 
+async function loadUserProfile(uid: string): Promise<UserProfile | null> {
+  try {
+    const docRef = doc(db, 'usuarios', uid);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return docSnap.data() as UserProfile;
+    }
+    return null;
+  } catch (error) {
+    console.error('Erro ao carregar perfil do Firestore:', error);
+    return null;
+  }
+}
+
+async function ensureUserDocument(user: User): Promise<void> {
+  try {
+    const docRef = doc(db, 'usuarios', user.uid);
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) {
+      await setDoc(docRef, {
+        uid: user.uid,
+        nome: user.displayName || '',
+        email: user.email || '',
+        avatar: user.photoURL || '',
+        criadoEm: Timestamp.now(),
+        atualizadoEm: Timestamp.now(),
+      });
+    }
+  } catch (error) {
+    console.error('Erro ao criar documento do usuário:', error);
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setUser(firebaseUser);
+      if (firebaseUser) {
+        await ensureUserDocument(firebaseUser);
+        const profile = await loadUserProfile(firebaseUser.uid);
+        setUserProfile(profile);
+      } else {
+        setUserProfile(null);
+      }
       setLoading(false);
     });
 
     return unsubscribe;
   }, []);
 
+  const refreshProfile = async () => {
+    if (user) {
+      const profile = await loadUserProfile(user.uid);
+      setUserProfile(profile);
+    }
+  };
+
   const signup = async (email: string, password: string, displayName: string) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    
-    // Atualizar perfil com nome
     if (userCredential.user) {
-      await updateProfile(userCredential.user, {
-        displayName,
-      });
-      // Forçar atualização do estado
-      setUser({ ...userCredential.user, displayName });
+      await updateProfile(userCredential.user, { displayName });
+      await ensureUserDocument(userCredential.user);
+      const profile = await loadUserProfile(userCredential.user.uid);
+      setUserProfile(profile);
+      setUser({ ...userCredential.user, displayName } as User);
     }
   };
 
@@ -65,6 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     await signOut(auth);
+    setUserProfile(null);
   };
 
   const loginWithGoogle = async () => {
@@ -76,26 +143,82 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await sendPasswordResetEmail(auth, email);
   };
 
-  const updateUserProfile = async (displayName: string, photoURL?: string) => {
-    if (auth.currentUser) {
-      await updateProfile(auth.currentUser, {
-        displayName,
-        photoURL,
-      });
-      // Forçar atualização do estado
-      setUser({ ...auth.currentUser });
+  const updateUserProfileFn = async (displayName: string, photoURL?: string) => {
+    if (!user) return;
+
+    // Salvar APENAS no Firestore (evita erro auth/network-request-failed)
+    const docRef = doc(db, 'usuarios', user.uid);
+    const updateData: any = {
+      nome: displayName,
+      atualizadoEm: Timestamp.now(),
+    };
+    if (photoURL !== undefined) {
+      updateData.avatar = photoURL;
     }
+
+    try {
+      await updateDoc(docRef, updateData);
+    } catch {
+      // Se doc não existe, criar
+      await setDoc(docRef, {
+        uid: user.uid,
+        nome: displayName,
+        email: user.email || '',
+        avatar: photoURL || '',
+        criadoEm: Timestamp.now(),
+        atualizadoEm: Timestamp.now(),
+      });
+    }
+
+    // Tentar atualizar Firebase Auth (sem photoURL para evitar erro de rede)
+    try {
+      await updateProfile(user, { displayName });
+    } catch (err) {
+      console.warn('Não foi possível atualizar Firebase Auth displayName:', err);
+    }
+
+    // Recarregar perfil do Firestore
+    const profile = await loadUserProfile(user.uid);
+    setUserProfile(profile);
+  };
+
+  const updateUserProfileData = async (data: Partial<UserProfile>) => {
+    if (!user) return;
+
+    const docRef = doc(db, 'usuarios', user.uid);
+    const updateData: any = {
+      ...data,
+      atualizadoEm: Timestamp.now(),
+    };
+
+    try {
+      await updateDoc(docRef, updateData);
+    } catch {
+      await setDoc(docRef, {
+        uid: user.uid,
+        email: user.email || '',
+        ...data,
+        criadoEm: Timestamp.now(),
+        atualizadoEm: Timestamp.now(),
+      }, { merge: true });
+    }
+
+    const profile = await loadUserProfile(user.uid);
+    setUserProfile(profile);
   };
 
   const value: AuthContextType = {
     user,
+    userProfile,
     loading,
     signup,
     login,
     logout,
     loginWithGoogle,
     resetPassword,
-    updateUserProfile,
+    updateUserProfile: updateUserProfileFn,
+    updateUserProfileData,
+    refreshProfile,
   };
 
   return (

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { ArrowLeft, User, Mail, Phone, MapPin, Briefcase, Calendar, Shield, Bell, Palette, LogOut, AlertTriangle } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { ArrowLeft, User, Mail, Phone, MapPin, Briefcase, Calendar, Loader, Camera } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
@@ -16,50 +16,64 @@ import { toast } from 'sonner';
 
 export function Perfil() {
   const navigate = useNavigate();
-  const { theme, toggleTheme } = useTheme();
-  const { user: firebaseUser, updateUserProfile, logout } = useAuth();
-  
-  const [avatarUrl, setAvatarUrl] = useState('https://api.dicebear.com/7.x/avataaars/svg?seed=Felix');
-  const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
+  const { theme } = useTheme();
+  const { user: firebaseUser, userProfile, updateUserProfileData, refreshProfile } = useAuth();
 
-  useEffect(() => {
-    if (firebaseUser?.photoURL) {
-      setAvatarUrl(firebaseUser.photoURL);
-    }
-  }, [firebaseUser]);
-  
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
   const [formData, setFormData] = useState({
-    nome: firebaseUser?.displayName || 'João Silva',
-    email: firebaseUser?.email || 'joao.silva@email.com',
-    telefone: '(11) 98765-4321',
-    cargo: 'Professor / Analista Sênior',
-    departamentoFIAP: 'Tecnologia da Informação',
-    departamentoItau: 'Digital Banking',
-    endereco: 'Av. Paulista, 1000',
-    cidade: 'São Paulo',
-    estado: 'SP',
-    cep: '01310-100',
-    bio: 'Profissional híbrido atuando na área de tecnologia e educação.',
-    dataNascimento: '1990-05-15',
+    nome: '',
+    email: '',
+    telefone: '',
+    cargo: '',
+    departamentoFIAP: '',
+    departamentoItau: '',
+    endereco: '',
+    cidade: '',
+    estado: '',
+    cep: '',
+    bio: '',
+    dataNascimento: '',
   });
 
-  // Atualizar formData quando o Firebase user mudar
+  // Carregar dados do perfil do Firestore
   useEffect(() => {
-    if (firebaseUser) {
+    if (userProfile) {
+      setFormData({
+        nome: userProfile.nome || firebaseUser?.displayName || '',
+        email: userProfile.email || firebaseUser?.email || '',
+        telefone: userProfile.telefone || '',
+        cargo: userProfile.cargo || '',
+        departamentoFIAP: userProfile.departamentoFIAP || '',
+        departamentoItau: userProfile.departamentoItau || '',
+        endereco: userProfile.endereco || '',
+        cidade: userProfile.cidade || '',
+        estado: userProfile.estado || '',
+        cep: userProfile.cep || '',
+        bio: userProfile.bio || '',
+        dataNascimento: userProfile.dataNascimento || '',
+      });
+      setAvatarUrl(userProfile.avatar || firebaseUser?.photoURL || '');
+      setIsLoading(false);
+    } else if (firebaseUser) {
       setFormData(prev => ({
         ...prev,
-        nome: firebaseUser.displayName || prev.nome,
-        email: firebaseUser.email || prev.email,
+        nome: firebaseUser.displayName || '',
+        email: firebaseUser.email || '',
       }));
+      setAvatarUrl(firebaseUser.photoURL || '');
+      setIsLoading(false);
     }
-  }, [firebaseUser]);
+  }, [userProfile, firebaseUser]);
 
   const handleAvatarChange = async (newAvatarUrl: string) => {
-    setAvatarUrl(newAvatarUrl);
-    
-    // Atualizar no Firebase
     try {
-      await updateUserProfile(formData.nome, newAvatarUrl);
+      // Salvar APENAS no Firestore (evita erro auth/network-request-failed)
+      await updateUserProfileData({ avatar: newAvatarUrl });
+      setAvatarUrl(newAvatarUrl);
       toast.success('Foto de perfil atualizada!');
     } catch (error) {
       console.error('Erro ao atualizar foto:', error);
@@ -73,490 +87,215 @@ export function Perfil() {
     notificacoesAula: true,
     notificacoesReuniao: true,
     notificacoesTarefa: true,
-    temaAutomatico: false,
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Aqui você adicionaria a lógica para salvar o perfil
-    console.log('Perfil atualizado:', formData);
-    alert('Perfil atualizado com sucesso!');
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleConfigSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Aqui você adicionaria a lógica para salvar as configurações
-    console.log('Configurações atualizadas:', configuracoes);
-    alert('Configurações atualizadas com sucesso!');
-  };
-
-  const handleLogout = async () => {
     try {
-      await logout();
-      toast.success('Logout realizado com sucesso!');
-      navigate('/login');
+      setIsSaving(true);
+      await updateUserProfileData({
+        nome: formData.nome,
+        email: formData.email,
+        telefone: formData.telefone,
+        cargo: formData.cargo,
+        departamentoFIAP: formData.departamentoFIAP,
+        departamentoItau: formData.departamentoItau,
+        endereco: formData.endereco,
+        cidade: formData.cidade,
+        estado: formData.estado,
+        cep: formData.cep,
+        bio: formData.bio,
+        dataNascimento: formData.dataNascimento,
+        avatar: avatarUrl,
+      });
+      toast.success('Perfil atualizado com sucesso!');
     } catch (error) {
-      console.error('Erro ao fazer logout:', error);
-      toast.error('Erro ao fazer logout');
+      console.error('Erro ao salvar perfil:', error);
+      toast.error('Erro ao salvar perfil');
+    } finally {
+      setIsSaving(false);
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader className="w-8 h-8 animate-spin text-[var(--theme-accent)]" />
+      </div>
+    );
+  }
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
   return (
-    <div className="p-6 space-y-6 max-w-5xl mx-auto">
+    <div className="p-4 space-y-6 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate('/')}
-          className="gap-2"
-        >
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="h-8 w-8">
           <ArrowLeft className="w-4 h-4" />
-          Voltar
         </Button>
         <div>
-          <h1 className="text-3xl font-bold text-[var(--theme-foreground)]">Meu Perfil</h1>
-          <p className="text-[var(--theme-muted-foreground)] mt-1">
-            Gerencie suas informações pessoais e configurações
+          <h1 className="text-2xl font-bold text-[var(--theme-foreground)]">Meu Perfil</h1>
+          <p className="text-sm text-[var(--theme-muted-foreground)]">
+            Gerencie suas informações pessoais e preferências
           </p>
         </div>
       </div>
 
-      {/* Avatar e Informações Rápidas */}
+      {/* Profile Photo Section */}
       <Card>
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-            <Avatar className="w-24 h-24">
-              <AvatarImage src={avatarUrl} />
-              <AvatarFallback>JS</AvatarFallback>
-            </Avatar>
-            <div className="flex-1 text-center md:text-left">
-              <h2 className="text-2xl font-bold text-[var(--theme-foreground)]">{formData.nome}</h2>
-              <p className="text-[var(--theme-muted-foreground)] mt-1">{formData.cargo}</p>
-              <div className="flex flex-wrap gap-2 mt-3 justify-center md:justify-start">
-                <div className="px-3 py-1 rounded-full bg-[#6A0DAD]/10 text-[#6A0DAD] text-sm font-medium">
-                  FIAP - {formData.departamentoFIAP}
-                </div>
-                <div className="px-3 py-1 rounded-full bg-[#EC7000]/10 text-[#EC7000] text-sm font-medium">
-                  Itaú - {formData.departamentoItau}
-                </div>
-              </div>
-            </div>
-            <Button variant="outline" onClick={() => setIsAvatarDialogOpen(true)}>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Foto de Perfil</CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center gap-6">
+          <Avatar className="w-24 h-24 border-4 border-[var(--theme-accent)]">
+            <AvatarImage src={avatarUrl} alt={formData.nome} />
+            <AvatarFallback className="text-2xl">{getInitials(formData.nome || 'U')}</AvatarFallback>
+          </Avatar>
+          <div className="space-y-2">
+            <p className="text-sm text-[var(--theme-muted-foreground)]">
+              Clique para alterar sua foto de perfil
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsAvatarDialogOpen(true)}
+              className="gap-2"
+            >
+              <Camera className="w-4 h-4" />
               Alterar Foto
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      <form onSubmit={handleSubmit}>
-        {/* Informações Pessoais */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="w-5 h-5 text-[var(--theme-accent)]" />
-              Informações Pessoais
-            </CardTitle>
-            <CardDescription>Atualize seus dados pessoais</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="nome">Nome Completo *</Label>
-                <Input
-                  id="nome"
-                  value={formData.nome}
-                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="dataNascimento">Data de Nascimento *</Label>
-                <Input
-                  id="dataNascimento"
-                  type="date"
-                  value={formData.dataNascimento}
-                  onChange={(e) => setFormData({ ...formData, dataNascimento: e.target.value })}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">E-mail *</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--theme-muted-foreground)]" />
-                  <Input
-                    id="email"
-                    type="email"
-                    className="pl-9"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="telefone">Telefone *</Label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--theme-muted-foreground)]" />
-                  <Input
-                    id="telefone"
-                    type="tel"
-                    className="pl-9"
-                    value={formData.telefone}
-                    onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="bio">Biografia</Label>
-              <Textarea
-                id="bio"
-                value={formData.bio}
-                onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                rows={3}
-                placeholder="Conte um pouco sobre você..."
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Informações Profissionais */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Briefcase className="w-5 h-5 text-[var(--theme-accent)]" />
-              Informações Profissionais
-            </CardTitle>
-            <CardDescription>Suas funções e departamentos</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="cargo">Cargo *</Label>
-              <Input
-                id="cargo"
-                value={formData.cargo}
-                onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="departamentoFIAP">Departamento FIAP *</Label>
-                <Input
-                  id="departamentoFIAP"
-                  value={formData.departamentoFIAP}
-                  onChange={(e) => setFormData({ ...formData, departamentoFIAP: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="departamentoItau">Departamento Itaú *</Label>
-                <Input
-                  id="departamentoItau"
-                  value={formData.departamentoItau}
-                  onChange={(e) => setFormData({ ...formData, departamentoItau: e.target.value })}
-                  required
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Endereço */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-[var(--theme-accent)]" />
-              Endereço
-            </CardTitle>
-            <CardDescription>Seu endereço residencial</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="endereco">Endereço Completo</Label>
-              <Input
-                id="endereco"
-                value={formData.endereco}
-                onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="cidade">Cidade</Label>
-                <Input
-                  id="cidade"
-                  value={formData.cidade}
-                  onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="estado">Estado</Label>
-                <Input
-                  id="estado"
-                  value={formData.estado}
-                  onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
-                  maxLength={2}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cep">CEP</Label>
-                <Input
-                  id="cep"
-                  value={formData.cep}
-                  onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="flex justify-end gap-3">
-          <Button type="button" variant="outline" onClick={() => navigate('/')}>
-            Cancelar
-          </Button>
-          <Button type="submit" variant="theme">
-            Salvar Alterações
-          </Button>
-        </div>
-      </form>
-
-      <Separator className="my-8" />
-
-      {/* Configurações */}
-      <form onSubmit={handleConfigSubmit}>
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="w-5 h-5 text-[var(--theme-accent)]" />
-              Notificações
-            </CardTitle>
-            <CardDescription>Configure suas preferências de notificações</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="notificacoesEmail">Notificações por E-mail</Label>
-                <p className="text-sm text-[var(--theme-muted-foreground)]">
-                  Receba atualizações importantes por e-mail
-                </p>
-              </div>
-              <Switch
-                id="notificacoesEmail"
-                checked={configuracoes.notificacoesEmail}
-                onCheckedChange={(checked) =>
-                  setConfiguracoes({ ...configuracoes, notificacoesEmail: checked })
-                }
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="notificacoesPush">Notificações Push</Label>
-                <p className="text-sm text-[var(--theme-muted-foreground)]">
-                  Receba notificações em tempo real no navegador
-                </p>
-              </div>
-              <Switch
-                id="notificacoesPush"
-                checked={configuracoes.notificacoesPush}
-                onCheckedChange={(checked) =>
-                  setConfiguracoes({ ...configuracoes, notificacoesPush: checked })
-                }
-              />
-            </div>
-
-            <Separator />
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="notificacoesAula">Notificações de Aulas</Label>
-                <p className="text-sm text-[var(--theme-muted-foreground)]">
-                  Alertas sobre aulas agendadas e materiais
-                </p>
-              </div>
-              <Switch
-                id="notificacoesAula"
-                checked={configuracoes.notificacoesAula}
-                onCheckedChange={(checked) =>
-                  setConfiguracoes({ ...configuracoes, notificacoesAula: checked })
-                }
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="notificacoesReuniao">Notificações de Reuniões</Label>
-                <p className="text-sm text-[var(--theme-muted-foreground)]">
-                  Lembretes de reuniões corporativas
-                </p>
-              </div>
-              <Switch
-                id="notificacoesReuniao"
-                checked={configuracoes.notificacoesReuniao}
-                onCheckedChange={(checked) =>
-                  setConfiguracoes({ ...configuracoes, notificacoesReuniao: checked })
-                }
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="notificacoesTarefa">Notificações de Tarefas</Label>
-                <p className="text-sm text-[var(--theme-muted-foreground)]">
-                  Alertas de prazos e tarefas pendentes
-                </p>
-              </div>
-              <Switch
-                id="notificacoesTarefa"
-                checked={configuracoes.notificacoesTarefa}
-                onCheckedChange={(checked) =>
-                  setConfiguracoes({ ...configuracoes, notificacoesTarefa: checked })
-                }
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Palette className="w-5 h-5 text-[var(--theme-accent)]" />
-              Aparência
-            </CardTitle>
-            <CardDescription>Personalize a aparência do sistema</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="temaAutomatico">Tema Automático</Label>
-                <p className="text-sm text-[var(--theme-muted-foreground)]">
-                  Alterna automaticamente entre FIAP e Itaú baseado no contexto
-                </p>
-              </div>
-              <Switch
-                id="temaAutomatico"
-                checked={configuracoes.temaAutomatico}
-                onCheckedChange={(checked) =>
-                  setConfiguracoes({ ...configuracoes, temaAutomatico: checked })
-                }
-              />
-            </div>
-
-            <Separator />
-
-            <div className="space-y-2">
-              <Label>Tema Preferido</Label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => toggleTheme('fiap')}
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    theme === 'fiap'
-                      ? 'border-[#6A0DAD] bg-[#6A0DAD]/10'
-                      : 'border-[var(--theme-border)] hover:border-[#6A0DAD]/50'
-                  }`}
-                >
-                  <div className="font-semibold text-[var(--theme-foreground)] mb-1">FIAP</div>
-                  <div className="text-xs text-[var(--theme-muted-foreground)]">
-                    Roxo neon futurista
-                  </div>
-                  <div className="flex gap-1 mt-2">
-                    <div className="w-full h-2 rounded bg-[#000000]" />
-                    <div className="w-full h-2 rounded bg-[#6A0DAD]" />
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => toggleTheme('itau')}
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    theme === 'itau'
-                      ? 'border-[#EC7000] bg-[#EC7000]/10'
-                      : 'border-[var(--theme-border)] hover:border-[#EC7000]/50'
-                  }`}
-                >
-                  <div className="font-semibold text-[var(--theme-foreground)] mb-1">Itaú</div>
-                  <div className="text-xs text-[var(--theme-muted-foreground)]">
-                    Laranja corporativo
-                  </div>
-                  <div className="flex gap-1 mt-2">
-                    <div className="w-full h-2 rounded bg-[#EC7000]" />
-                    <div className="w-full h-2 rounded bg-[#003A8F]" />
-                  </div>
-                </button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="flex justify-end gap-3">
-          <Button type="submit" variant="theme">
-            Salvar Configurações
-          </Button>
-        </div>
-      </form>
-
-      {/* Zona de Perigo */}
-      <Separator className="my-8" />
-      
-      <Card className="border-destructive">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-destructive">
-            <AlertTriangle className="w-5 h-5" />
-            Zona de Perigo
-          </CardTitle>
-          <CardDescription>Ações irreversíveis e de segurança</CardDescription>
+      {/* Personal Information */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Informações Pessoais</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-4 border border-destructive/20 rounded-lg bg-destructive/5">
-            <div className="space-y-1">
-              <div className="font-medium text-[var(--theme-foreground)]">Encerrar Sessão</div>
-              <p className="text-sm text-[var(--theme-muted-foreground)]">
-                Sair da sua conta e encerrar a sessão atual
-              </p>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="nome" className="text-sm flex items-center gap-2">
+                  <User className="w-4 h-4" /> Nome Completo
+                </Label>
+                <Input id="nome" name="nome" value={formData.nome} onChange={handleInputChange} className="h-9 text-sm" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-sm flex items-center gap-2">
+                  <Mail className="w-4 h-4" /> Email
+                </Label>
+                <Input id="email" name="email" type="email" value={formData.email} disabled className="h-9 text-sm opacity-50" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="telefone" className="text-sm flex items-center gap-2">
+                  <Phone className="w-4 h-4" /> Telefone
+                </Label>
+                <Input id="telefone" name="telefone" type="tel" value={formData.telefone} onChange={handleInputChange} placeholder="(11) 98765-4321" className="h-9 text-sm" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cargo" className="text-sm flex items-center gap-2">
+                  <Briefcase className="w-4 h-4" /> Cargo
+                </Label>
+                <Input id="cargo" name="cargo" value={formData.cargo} onChange={handleInputChange} className="h-9 text-sm" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dataNascimento" className="text-sm flex items-center gap-2">
+                  <Calendar className="w-4 h-4" /> Data de Nascimento
+                </Label>
+                <Input id="dataNascimento" name="dataNascimento" type="date" value={formData.dataNascimento} onChange={handleInputChange} className="h-9 text-sm" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="departamentoFIAP" className="text-sm">Departamento FIAP</Label>
+                <Input id="departamentoFIAP" name="departamentoFIAP" value={formData.departamentoFIAP} onChange={handleInputChange} className="h-9 text-sm" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="departamentoItau" className="text-sm">Departamento Itaú</Label>
+                <Input id="departamentoItau" name="departamentoItau" value={formData.departamentoItau} onChange={handleInputChange} className="h-9 text-sm" />
+              </div>
             </div>
-            <Button 
-              variant="destructive" 
-              onClick={handleLogout}
-              className="gap-2"
-            >
-              <LogOut className="w-4 h-4" />
-              Sair da Conta
-            </Button>
-          </div>
 
-          <div className="flex items-center justify-between p-4 border border-destructive/20 rounded-lg bg-destructive/5">
-            <div className="space-y-1">
-              <div className="font-medium text-destructive">Excluir Conta</div>
-              <p className="text-sm text-[var(--theme-muted-foreground)]">
-                Deletar permanentemente sua conta e todos os dados associados
-              </p>
+            <div className="space-y-2">
+              <Label htmlFor="bio" className="text-sm">Bio</Label>
+              <Textarea id="bio" name="bio" value={formData.bio} onChange={handleInputChange} className="text-sm" rows={3} />
             </div>
-            <Button 
-              variant="outline" 
-              className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
-              onClick={() => toast.error('Funcionalidade em desenvolvimento')}
-            >
-              Excluir Conta
-            </Button>
-          </div>
+
+            <Separator />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="endereco" className="text-sm flex items-center gap-2">
+                  <MapPin className="w-4 h-4" /> Endereço
+                </Label>
+                <Input id="endereco" name="endereco" value={formData.endereco} onChange={handleInputChange} className="h-9 text-sm" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cidade" className="text-sm">Cidade</Label>
+                <Input id="cidade" name="cidade" value={formData.cidade} onChange={handleInputChange} className="h-9 text-sm" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="estado" className="text-sm">Estado</Label>
+                <Input id="estado" name="estado" value={formData.estado} onChange={handleInputChange} className="h-9 text-sm" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cep" className="text-sm">CEP</Label>
+                <Input id="cep" name="cep" value={formData.cep} onChange={handleInputChange} className="h-9 text-sm" />
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <Button type="submit" disabled={isSaving} className="gap-2">
+                {isSaving && <Loader className="w-4 h-4 animate-spin" />}
+                {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+              </Button>
+            </div>
+          </form>
         </CardContent>
       </Card>
 
+      {/* Preferences */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Preferências</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {[
+            { key: 'notificacoesEmail', label: 'Notificações por Email' },
+            { key: 'notificacoesPush', label: 'Notificações Push' },
+            { key: 'notificacoesAula', label: 'Notificações de Aula' },
+            { key: 'notificacoesReuniao', label: 'Notificações de Reunião' },
+            { key: 'notificacoesTarefa', label: 'Notificações de Tarefa' },
+          ].map(item => (
+            <div key={item.key} className="flex items-center justify-between">
+              <Label className="text-sm">{item.label}</Label>
+              <Switch
+                checked={(configuracoes as any)[item.key]}
+                onCheckedChange={(checked) =>
+                  setConfiguracoes(prev => ({ ...prev, [item.key]: checked }))
+                }
+              />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Avatar Upload Dialog */}
       <AvatarUploadDialog
         open={isAvatarDialogOpen}
         onOpenChange={setIsAvatarDialogOpen}
         currentAvatar={avatarUrl}
         onAvatarChange={handleAvatarChange}
-        fallback="JS"
+        fallback={getInitials(formData.nome || 'U')}
       />
     </div>
   );

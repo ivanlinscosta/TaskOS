@@ -27,18 +27,11 @@ import { AIAssistant } from "./pages/ai-assistant";
 import { Perfil } from "./pages/perfil";
 import { NotFound } from "./pages/not-found";
 
+
 export const router = createBrowserRouter([
   {
-    path: "/login",
-    Component: Login,
-  },
-  {
     path: "/",
-    element: (
-      <ProtectedRoute>
-        <Layout />
-      </ProtectedRoute>
-    ),
+    element: <ProtectedRoute><Layout /></ProtectedRoute>,
     children: [
       { index: true, Component: Dashboard },
       { path: "perfil", Component: Perfil },
@@ -65,5 +58,9 @@ export const router = createBrowserRouter([
       { path: "ai", Component: AIAssistant },
       { path: "*", Component: NotFound },
     ],
+  },
+  {
+    path: "/login",
+    Component: Login,
   },
 ]);

@@ -1,47 +1,134 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Loader } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
+import { toast } from 'sonner';
+import * as analistasService from '../../../services/analistas-service';
 import { mockAnalistas } from '../../../lib/mock-data';
 
 export function EditarAnalista() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const analista = mockAnalistas.find(a => a.id === id);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [analista, setAnalista] = useState<any>(null);
 
   const [formData, setFormData] = useState({
-    nome: analista?.nome || '',
-    email: analista?.email || '',
+    nome: '',
+    email: '',
     telefone: '',
-    funcao: analista?.funcao || '',
-    salario: analista?.salario?.toString() || '',
-    dataAdmissao: analista?.dataAdmissao 
-      ? new Date(analista.dataAdmissao).toISOString().split('T')[0]
-      : '',
-    observacoes: analista?.observacoes || ''
+    funcao: '',
+    squad: '',
+    senioridade: '',
+    dataAdmissao: '',
+    salario: '',
+    observacoes: ''
   });
 
+  // Carregar analista ao montar
   useEffect(() => {
-    if (!analista) {
-      navigate('/itau/analistas');
+    if (id) {
+      carregarAnalista();
     }
-  }, [analista, navigate]);
+  }, [id]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Aqui você integraria com Firebase/backend
-    console.log('Analista atualizado:', formData);
-    navigate('/itau/analistas');
+  const carregarAnalista = async () => {
+    try {
+      setIsLoading(true);
+      const analistaFirebase = await analistasService.buscarAnalistaPorId(id || '');
+
+      if (analistaFirebase) {
+        setAnalista(analistaFirebase);
+        setFormData({
+          nome: analistaFirebase.nome || '',
+          email: analistaFirebase.email || '',
+          telefone: analistaFirebase.telefone || '',
+          funcao: analistaFirebase.funcao || '',
+          squad: analistaFirebase.squad || '',
+          senioridade: analistaFirebase.senioridade || '',
+          dataAdmissao: analistaFirebase.dataAdmissao 
+            ? new Date(analistaFirebase.dataAdmissao).toISOString().split('T')[0]
+            : '',
+          salario: analistaFirebase.salario?.toString() || '',
+          observacoes: analistaFirebase.observacoes || ''
+        });
+      } else {
+        // Fallback para mock
+        const analistaMock = mockAnalistas.find(a => a.id === id);
+        if (analistaMock) {
+          setAnalista(analistaMock);
+          setFormData({
+            nome: analistaMock.nome || '',
+            email: analistaMock.email || '',
+            telefone: analistaMock.telefone || '',
+            funcao: analistaMock.funcao || '',
+            squad: analistaMock.squad || '',
+            senioridade: analistaMock.senioridade || '',
+            dataAdmissao: analistaMock.dataAdmissao
+              ? new Date(analistaMock.dataAdmissao).toISOString().split('T')[0]
+              : '',
+            salario: analistaMock.salario?.toString() || '',
+            observacoes: analistaMock.observacoes || ''
+          });
+        } else {
+          toast.error('Analista não encontrado');
+          navigate('/itau/analistas');
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao carregar analista:', error);
+      toast.error('Erro ao carregar analista');
+      navigate('/itau/analistas');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  if (!analista) return null;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!id) {
+      toast.error('ID do analista não encontrado');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+
+      await analistasService.atualizarAnalista(id, {
+        ...formData,
+        dataAdmissao: formData.dataAdmissao ? new Date(formData.dataAdmissao) : undefined,
+        salario: formData.salario ? parseFloat(formData.salario) : undefined,
+      });
+
+      toast.success('Analista atualizado com sucesso!');
+      navigate('/itau/analistas');
+    } catch (error) {
+      console.error('Erro ao atualizar analista:', error);
+      toast.error('Erro ao atualizar analista');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader className="w-8 h-8 animate-spin text-[var(--theme-accent)]" />
+      </div>
+    );
+  }
+
+  if (!analista) {
+    return null;
+  }
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-4 space-y-4 max-w-3xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Button
@@ -106,7 +193,7 @@ export function EditarAnalista() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="funcao" className="text-sm">Função/Cargo *</Label>
+                <Label htmlFor="funcao" className="text-sm">Função *</Label>
                 <Input
                   id="funcao"
                   value={formData.funcao}
@@ -117,47 +204,68 @@ export function EditarAnalista() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="salario" className="text-sm">Salário (R$)</Label>
+                <Label htmlFor="squad" className="text-sm">Squad</Label>
                 <Input
-                  id="salario"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.salario}
-                  onChange={(e) => setFormData({ ...formData, salario: e.target.value })}
-                  placeholder="0.00"
+                  id="squad"
+                  value={formData.squad}
+                  onChange={(e) => setFormData({ ...formData, squad: e.target.value })}
                   className="h-9 text-sm"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="dataAdmissao" className="text-sm">Data de Admissão *</Label>
+                <Label htmlFor="senioridade" className="text-sm">Senioridade</Label>
+                <Input
+                  id="senioridade"
+                  value={formData.senioridade}
+                  onChange={(e) => setFormData({ ...formData, senioridade: e.target.value })}
+                  className="h-9 text-sm"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="dataAdmissao" className="text-sm">Data de Admissão</Label>
                 <Input
                   id="dataAdmissao"
                   type="date"
                   value={formData.dataAdmissao}
                   onChange={(e) => setFormData({ ...formData, dataAdmissao: e.target.value })}
-                  required
                   className="h-9 text-sm"
                 />
               </div>
 
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="observacoes" className="text-sm">Observações</Label>
-                <Textarea
-                  id="observacoes"
-                  value={formData.observacoes}
-                  onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
-                  rows={4}
-                  className="text-sm"
+              <div className="space-y-2">
+                <Label htmlFor="salario" className="text-sm">Salário</Label>
+                <Input
+                  id="salario"
+                  type="number"
+                  step="0.01"
+                  value={formData.salario}
+                  onChange={(e) => setFormData({ ...formData, salario: e.target.value })}
+                  className="h-9 text-sm"
                 />
               </div>
             </div>
 
-            <div className="flex gap-2 pt-2">
-              <Button type="submit" variant="theme" className="gap-2">
-                <Save className="w-4 h-4" />
-                Salvar Alterações
+            <div className="space-y-2">
+              <Label htmlFor="observacoes" className="text-sm">Observações</Label>
+              <Textarea
+                id="observacoes"
+                value={formData.observacoes}
+                onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
+                className="text-sm"
+                rows={4}
+              />
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <Button
+                type="submit"
+                disabled={isSaving}
+                className="gap-2"
+              >
+                {isSaving && <Loader className="w-4 h-4 animate-spin" />}
+                {isSaving ? 'Salvando...' : 'Salvar Alterações'}
               </Button>
               <Button
                 type="button"

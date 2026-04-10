@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { mockTasks } from '../../../lib/mockData';
@@ -13,8 +13,11 @@ import { Label } from '../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Checkbox } from '../../components/ui/checkbox';
 import { ScrollArea } from '../../components/ui/scroll-area';
-import { Plus, GripVertical, Calendar, Tag, CheckCircle2, Circle } from 'lucide-react';
+import { Plus, GripVertical, Calendar, Tag, CheckCircle2, Circle, Loader } from 'lucide-react';
 import { cn, formatDate } from '../../../lib/utils';
+import { toast } from 'sonner';
+import * as tarefasService from '../../../services/tarefas-firebase-service';
+import { useAuth } from '../../../lib/auth-context';
 
 interface KanbanBoardProps {
   context: 'fiap' | 'itau';
@@ -23,9 +26,10 @@ interface KanbanBoardProps {
 interface TaskCardProps {
   task: Task;
   onUpdate: (task: Task) => void;
+  onStatusChange: (taskId: string, newStatus: Task['status']) => void;
 }
 
-const TaskCard = ({ task, onUpdate }: TaskCardProps) => {
+const TaskCard = ({ task, onUpdate, onStatusChange }: TaskCardProps) => {
   const [{ isDragging }, drag] = useDrag(() => ({
     type: 'TASK',
     item: { id: task.id, status: task.status },
@@ -218,9 +222,10 @@ interface ColumnProps {
   count: number;
   onDrop: (taskId: string, newStatus: Task['status']) => void;
   onUpdate: (task: Task) => void;
+  onStatusChange: (taskId: string, newStatus: Task['status']) => void;
 }
 
-const KanbanColumn = ({ title, status, tasks, count, onDrop, onUpdate }: ColumnProps) => {
+const KanbanColumn = ({ title, status, tasks, count, onDrop, onUpdate, onStatusChange }: ColumnProps) => {
   const [{ isOver }, drop] = useDrop(() => ({
     accept: 'TASK',
     drop: (item: { id: string; status: string }) => {
@@ -259,7 +264,12 @@ const KanbanColumn = ({ title, status, tasks, count, onDrop, onUpdate }: ColumnP
               </div>
             ) : (
               tasks.map((task) => (
-                <TaskCard key={task.id} task={task} onUpdate={onUpdate} />
+                <TaskCard 
+                  key={task.id} 
+                  task={task} 
+                  onUpdate={onUpdate}
+                  onStatusChange={onStatusChange}
+                />
               ))
             )}
           </ScrollArea>
@@ -270,22 +280,70 @@ const KanbanColumn = ({ title, status, tasks, count, onDrop, onUpdate }: ColumnP
 };
 
 export default function KanbanBoard({ context }: KanbanBoardProps) {
-  const [tasks, setTasks] = useState(
+  const { user } = useAuth();
+  const [tasks, setTasks] = useState<Task[]>(
     mockTasks.filter((t) => t.context === context)
   );
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleDrop = (taskId: string, newStatus: Task['status']) => {
-    setTasks((prevTasks) =>
-      prevTasks.map((task) =>
-        task.id === taskId ? { ...task, status: newStatus } : task
-      )
-    );
+  // Carregar tarefas do Firebase ao montar o componente
+  useEffect(() => {
+    loadTasks();
+  }, [context]);
+
+  const loadTasks = async () => {
+    try {
+      setIsLoading(true);
+      const firebaseTasks = await tarefasService.listTasksByContext(context);
+      if (firebaseTasks.length > 0) {
+        setTasks(firebaseTasks);
+      }
+    } catch (error) {
+      console.warn('Erro ao carregar tarefas do Firebase, usando mock:', error);
+      // Manter as tarefas mock se houver erro
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDrop = async (taskId: string, newStatus: Task['status']) => {
+    try {
+      // Atualizar estado local imediatamente
+      setTasks((prevTasks) =>
+        prevTasks.map((task) =>
+          task.id === taskId ? { ...task, status: newStatus } : task
+        )
+      );
+
+      // Persistir no Firebase
+      if (user) {
+        await tarefasService.updateTaskStatus(taskId, newStatus);
+        
+        // Mostrar mensagem de sucesso
+        const statusLabel = {
+          'backlog': 'Backlog',
+          'doing': 'Em Progresso',
+          'done': 'Concluído'
+        }[newStatus];
+        
+        toast.success(`Tarefa movida para ${statusLabel}`);
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar status da tarefa:', error);
+      toast.error('Erro ao atualizar tarefa');
+      // Recarregar tarefas em caso de erro
+      loadTasks();
+    }
   };
 
   const handleUpdate = (updatedTask: Task) => {
     setTasks((prevTasks) =>
       prevTasks.map((task) => (task.id === updatedTask.id ? updatedTask : task))
     );
+  };
+
+  const handleStatusChange = async (taskId: string, newStatus: Task['status']) => {
+    handleDrop(taskId, newStatus);
   };
 
   const backlogTasks = tasks.filter((t) => t.status === 'backlog');
@@ -302,7 +360,14 @@ export default function KanbanBoard({ context }: KanbanBoardProps) {
               Kanban {context === 'fiap' ? 'FIAP' : 'Itaú'}
             </h1>
             <p className="text-muted-foreground mt-1">
-              {tasks.length} tarefas • {doingTasks.length} em progresso
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <Loader className="h-4 w-4 animate-spin" />
+                  Carregando tarefas...
+                </span>
+              ) : (
+                `${tasks.length} tarefas • ${doingTasks.length} em progresso`
+              )}
             </p>
           </div>
           <Button className="gap-2">
@@ -320,6 +385,7 @@ export default function KanbanBoard({ context }: KanbanBoardProps) {
             count={backlogTasks.length}
             onDrop={handleDrop}
             onUpdate={handleUpdate}
+            onStatusChange={handleStatusChange}
           />
           <KanbanColumn
             title="Em Progresso"
@@ -328,6 +394,7 @@ export default function KanbanBoard({ context }: KanbanBoardProps) {
             count={doingTasks.length}
             onDrop={handleDrop}
             onUpdate={handleUpdate}
+            onStatusChange={handleStatusChange}
           />
           <KanbanColumn
             title="Concluído"
@@ -336,6 +403,7 @@ export default function KanbanBoard({ context }: KanbanBoardProps) {
             count={doneTasks.length}
             onDrop={handleDrop}
             onUpdate={handleUpdate}
+            onStatusChange={handleStatusChange}
           />
         </div>
       </div>
