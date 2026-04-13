@@ -13,20 +13,67 @@ import {
 } from 'firebase/firestore';
 import { db, COLLECTIONS } from '../lib/firebase-config';
 
+export interface Atividade {
+  id: string;
+  nome: string;
+  data?: string;    // YYYY-MM-DD
+  horario?: string; // HH:mm
+}
+
+export type CategoriaOrcamento = 'passagem' | 'hospedagem' | 'passeios' | 'alimentacao' | 'transporte';
+
+export interface ItemOrcamento {
+  categoria: CategoriaOrcamento;
+  valor: number;
+  formaPagamento: 'a_vista' | 'a_prazo';
+  parcelas?: number;            // só quando a_prazo
+  dataPrimeiraParcela?: string; // YYYY-MM-DD
+}
+
 export interface Viagem {
   id?: string;
   destino: string;
   descricao?: string;
   dataIda: Date;
   dataVolta?: Date;
-  orcamento: number;
+  orcamento: number;            // soma calculada do orcamentoDetalhado
   gastoReal?: number;
   status: 'planejada' | 'em_andamento' | 'concluida' | 'cancelada';
-  atividades?: string[];
+  atividades?: Atividade[];
+  orcamentoDetalhado?: ItemOrcamento[];
   notas?: string;
   foto?: string;
   criadoEm?: Date;
   atualizadoEm?: Date;
+}
+
+export const CATEGORIAS_ORCAMENTO_LABELS: Record<CategoriaOrcamento, string> = {
+  passagem:    'Passagem',
+  hospedagem:  'Hospedagem',
+  passeios:    'Passeios',
+  alimentacao: 'Alimentação',
+  transporte:  'Transporte',
+};
+
+export const CATEGORIAS_ORCAMENTO_CORES: Record<CategoriaOrcamento, string> = {
+  passagem:    '#6366F1',
+  hospedagem:  '#F59E0B',
+  passeios:    '#10B981',
+  alimentacao: '#EF4444',
+  transporte:  '#3B82F6',
+};
+
+/** Calcula a data da última parcela a partir da primeira + quantidade */
+export function calcularDataUltimaParcela(dataPrimeira: string, parcelas: number): string {
+  if (!dataPrimeira || parcelas <= 1) return dataPrimeira || '';
+  const d = new Date(dataPrimeira);
+  d.setMonth(d.getMonth() + parcelas - 1);
+  return d.toISOString().split('T')[0];
+}
+
+/** Soma os valores de orcamentoDetalhado */
+export function calcularTotalOrcamento(itens: ItemOrcamento[]): number {
+  return itens.reduce((s, i) => s + (i.valor || 0), 0);
 }
 
 function docToViagem(id: string, data: any): Viagem {
@@ -40,6 +87,7 @@ function docToViagem(id: string, data: any): Viagem {
     gastoReal: data.gastoReal || 0,
     status: data.status || 'planejada',
     atividades: data.atividades || [],
+    orcamentoDetalhado: data.orcamentoDetalhado || [],
     notas: data.notas || '',
     foto: data.foto || '',
     criadoEm: data.criadoEm?.toDate?.() || new Date(),

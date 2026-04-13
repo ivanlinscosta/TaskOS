@@ -48,6 +48,8 @@ export const COLLECTIONS = {
   VIAGENS: 'viagens',
   CUSTOS: 'custos',
   TAREFAS_PESSOAIS: 'tarefas_pessoais',
+  // Finanças
+  RECEITAS: 'receitas',
   // WhatsApp
   WHATSAPP_MENSAGENS: 'whatsapp_mensagens',
 } as const;
