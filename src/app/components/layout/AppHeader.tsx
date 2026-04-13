@@ -172,8 +172,15 @@ export function Header() {
     photoURL: '',
   };
 
+  const CONTEXT_HOME: Record<string, string> = {
+    fiap: '/',
+    itau: '/',
+    pessoal: '/pessoal',
+  };
+
   const handleContextSwitch = (mode: 'fiap' | 'itau' | 'pessoal') => {
     setContextMode(mode);
+    navigate(CONTEXT_HOME[mode] ?? '/');
   };
 
   const handleLogout = async () => {
