@@ -1,192 +1,281 @@
-/**
- * Serviço de Aulas - Firebase Integration Completo
- * Queries simplificadas (sem orderBy no Firestore) para evitar necessidade de índice
- */
-
 import {
-  collection,
   addDoc,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  serverTimestamp,
+  setDoc,
   updateDoc,
   deleteDoc,
-  doc,
-  getDocs,
-  getDoc,
-  Timestamp,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase-config';
 
-export interface Material {
+export interface MaterialAula {
   id: string;
-  nome: string;
   tipo: 'pdf' | 'ppt' | 'link' | 'video' | 'doc';
+  nome: string;
   url: string;
-  tamanho?: string;
-  uploadedAt: Date;
 }
 
-export interface Aula {
+export interface AtividadeAula {
+  id: string;
+  titulo: string;
+  descricao: string;
+  data?: string;
+}
+
+export interface AvaliacaoAula {
+  id: string;
+  titulo: string;
+  descricao: string;
+  peso?: number;
+  data?: string;
+}
+
+export interface AulaDisciplina {
   id?: string;
   titulo: string;
   disciplina: string;
-  descricao: string;
-  data: Date;
+  data: string;
   duracao: number;
-  materiais: Material[];
-  tags: string[];
-  objetivos?: string[];
-  topicos?: string[];
-  criadoEm?: Date;
-  atualizadoEm?: Date;
+  descricao: string;
+  planoDeAula: string;
+  objetivos: string[];
+  topicos: string[];
+  materiais: MaterialAula[];
+  atividades: AtividadeAula[];
+  avaliacoes: AvaliacaoAula[];
+  createdAt?: any;
+  updatedAt?: any;
 }
 
-const COLLECTION_NAME = 'aulas';
-
-/**
- * Cria uma nova aula no Firebase
- */
-export async function criarAula(aula: Omit<Aula, 'id' | 'criadoEm' | 'atualizadoEm'>): Promise<string> {
-  try {
-    const aulaData = {
-      ...aula,
-      data: Timestamp.fromDate(new Date(aula.data)),
-      materiais: (aula.materiais || []).map((m) => ({
-        ...m,
-        uploadedAt: Timestamp.fromDate(new Date(m.uploadedAt)),
-      })),
-      criadoEm: Timestamp.now(),
-      atualizadoEm: Timestamp.now(),
-    };
-
-    const docRef = await addDoc(collection(db, COLLECTION_NAME), aulaData);
-    return docRef.id;
-  } catch (error) {
-    console.error('Erro ao criar aula:', error);
-    throw error;
-  }
+export interface DisciplinaComAulas {
+  id: string;
+  nome: string;
+  descricao?: string;
+  aulas: AulaDisciplina[];
 }
 
-/**
- * Atualiza uma aula existente
- */
-export async function atualizarAula(id: string, aula: Partial<Aula>): Promise<void> {
-  try {
-    const aulaRef = doc(db, COLLECTION_NAME, id);
-    const updateData: any = { ...aula };
+export type EventoCronogramaTipo = 'aula' | 'atividade' | 'avaliacao';
 
-    if (aula.data) {
-      updateData.data = Timestamp.fromDate(new Date(aula.data));
-    }
+export interface EventoCronograma {
+  id: string;
+  tipo: EventoCronogramaTipo;
+  titulo: string;
+  descricao: string;
+  data: string;
+  disciplina: string;
+  aulaId?: string;
+  aulaTitulo?: string;
+  duracao?: number;
+  badgeLabel: string;
+}
 
-    if (aula.materiais) {
-      updateData.materiais = aula.materiais.map((m) => ({
-        ...m,
-        uploadedAt: Timestamp.fromDate(new Date(m.uploadedAt)),
+function slugify(text: string) {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
+
+export async function criarOuAtualizarDisciplina(nome: string, descricao = '') {
+  const disciplinaId = slugify(nome);
+  const disciplinaRef = doc(db, 'disciplinas', disciplinaId);
+
+  await setDoc(
+    disciplinaRef,
+    {
+      nome,
+      descricao,
+      updatedAt: serverTimestamp(),
+      createdAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
+
+  return disciplinaId;
+}
+
+export async function criarAula(data: AulaDisciplina) {
+  const disciplinaId = await criarOuAtualizarDisciplina(data.disciplina);
+
+  const aulaPayload = {
+    titulo: data.titulo,
+    disciplina: data.disciplina,
+    data: data.data,
+    duracao: Number(data.duracao),
+    descricao: data.descricao,
+    planoDeAula: data.planoDeAula,
+    objetivos: data.objetivos || [],
+    topicos: data.topicos || [],
+    materiais: data.materiais || [],
+    atividades: data.atividades || [],
+    avaliacoes: data.avaliacoes || [],
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+
+  const aulasRef = collection(db, 'disciplinas', disciplinaId, 'aulas');
+  const docRef = await addDoc(aulasRef, aulaPayload);
+  return docRef.id;
+}
+
+export async function listarDisciplinasComAulas(): Promise<DisciplinaComAulas[]> {
+  const disciplinasSnapshot = await getDocs(collection(db, 'disciplinas'));
+
+  const disciplinas = await Promise.all(
+    disciplinasSnapshot.docs.map(async (disciplinaDoc) => {
+      const disciplinaData = disciplinaDoc.data();
+      const aulasSnapshot = await getDocs(
+        query(collection(db, 'disciplinas', disciplinaDoc.id, 'aulas'))
+      );
+
+      const aulas = aulasSnapshot.docs.map((aulaDoc) => ({
+        id: aulaDoc.id,
+        ...(aulaDoc.data() as Omit<AulaDisciplina, 'id'>),
       }));
-    }
 
-    updateData.atualizadoEm = Timestamp.now();
+      aulas.sort((a, b) => {
+        const da = new Date(a.data || '').getTime();
+        const dbb = new Date(b.data || '').getTime();
+        return da - dbb;
+      });
 
-    await updateDoc(aulaRef, updateData);
-  } catch (error) {
-    console.error('Erro ao atualizar aula:', error);
-    throw error;
-  }
-}
-
-/**
- * Deleta uma aula
- */
-export async function deletarAula(id: string): Promise<void> {
-  try {
-    await deleteDoc(doc(db, COLLECTION_NAME, id));
-  } catch (error) {
-    console.error('Erro ao deletar aula:', error);
-    throw error;
-  }
-}
-
-/**
- * Busca uma aula por ID
- */
-export async function buscarAulaPorId(id: string): Promise<Aula | null> {
-  try {
-    const docSnap = await getDoc(doc(db, COLLECTION_NAME, id));
-
-    if (docSnap.exists()) {
-      const data = docSnap.data();
       return {
-        id: docSnap.id,
-        ...data,
-        data: data.data?.toDate?.() || new Date(),
-        materiais: (data.materiais || []).map((m: any) => ({
-          ...m,
-          uploadedAt: m.uploadedAt?.toDate?.() || new Date(),
-        })),
-        criadoEm: data.criadoEm?.toDate?.() || new Date(),
-        atualizadoEm: data.atualizadoEm?.toDate?.() || new Date(),
-      } as Aula;
-    }
+        id: disciplinaDoc.id,
+        nome: disciplinaData.nome || disciplinaDoc.id,
+        descricao: disciplinaData.descricao || '',
+        aulas,
+      };
+    })
+  );
 
-    return null;
-  } catch (error) {
-    console.error('Erro ao buscar aula:', error);
-    throw error;
-  }
+  disciplinas.sort((a, b) => a.nome.localeCompare(b.nome));
+  return disciplinas;
 }
 
-/**
- * Lista todas as aulas (sem orderBy para evitar necessidade de índice)
- */
-export async function listarAulas(): Promise<Aula[]> {
-  try {
-    const snapshot = await getDocs(collection(db, COLLECTION_NAME));
+export async function buscarAulaPorId(
+  disciplinaId: string,
+  aulaId: string
+): Promise<AulaDisciplina | null> {
+  const aulaRef = doc(db, 'disciplinas', disciplinaId, 'aulas', aulaId);
+  const snap = await getDoc(aulaRef);
 
-    const aulas = snapshot.docs.map((d) => {
-      const data = d.data();
-      return {
-        id: d.id,
-        ...data,
-        data: data.data?.toDate?.() || new Date(),
-        materiais: (data.materiais || []).map((m: any) => ({
-          ...m,
-          uploadedAt: m.uploadedAt?.toDate?.() || new Date(),
-        })),
-        criadoEm: data.criadoEm?.toDate?.() || new Date(),
-        atualizadoEm: data.atualizadoEm?.toDate?.() || new Date(),
-      } as Aula;
+  if (!snap.exists()) return null;
+
+  return {
+    id: snap.id,
+    ...(snap.data() as Omit<AulaDisciplina, 'id'>),
+  };
+}
+
+export async function atualizarAula(
+  disciplinaId: string,
+  aulaId: string,
+  data: AulaDisciplina
+) {
+  const disciplinaAtualId = slugify(disciplinaId);
+  const disciplinaNovaId = slugify(data.disciplina);
+
+  await criarOuAtualizarDisciplina(data.disciplina);
+
+  const payload = {
+    titulo: data.titulo,
+    disciplina: data.disciplina,
+    data: data.data,
+    duracao: Number(data.duracao),
+    descricao: data.descricao,
+    planoDeAula: data.planoDeAula,
+    objetivos: data.objetivos || [],
+    topicos: data.topicos || [],
+    materiais: data.materiais || [],
+    atividades: data.atividades || [],
+    avaliacoes: data.avaliacoes || [],
+    updatedAt: serverTimestamp(),
+  };
+
+  if (disciplinaAtualId === disciplinaNovaId) {
+    const aulaRef = doc(db, 'disciplinas', disciplinaAtualId, 'aulas', aulaId);
+    await updateDoc(aulaRef, payload);
+    return;
+  }
+
+  const aulaRefNova = doc(db, 'disciplinas', disciplinaNovaId, 'aulas', aulaId);
+  await setDoc(
+    aulaRefNova,
+    {
+      ...payload,
+      createdAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
+}
+
+export async function deletarAula(disciplinaId: string, aulaId: string) {
+  const aulaRef = doc(db, 'disciplinas', disciplinaId, 'aulas', aulaId);
+  await deleteDoc(aulaRef);
+}
+
+export async function listarEventosCronograma(): Promise<EventoCronograma[]> {
+  const disciplinas = await listarDisciplinasComAulas();
+  const eventos: EventoCronograma[] = [];
+
+  disciplinas.forEach((disciplina) => {
+    disciplina.aulas.forEach((aula) => {
+      if (aula.data) {
+        eventos.push({
+          id: `aula-${disciplina.id}-${aula.id}`,
+          tipo: 'aula',
+          titulo: aula.titulo,
+          descricao: aula.descricao || aula.planoDeAula || 'Aula cadastrada',
+          data: aula.data,
+          disciplina: disciplina.nome,
+          aulaId: aula.id,
+          aulaTitulo: aula.titulo,
+          duracao: aula.duracao,
+          badgeLabel: 'Aula',
+        });
+      }
+
+      (aula.atividades || []).forEach((atividade) => {
+        if (!atividade.data) return;
+
+        eventos.push({
+          id: `atividade-${disciplina.id}-${aula.id}-${atividade.id}`,
+          tipo: 'atividade',
+          titulo: atividade.titulo || `Atividade - ${aula.titulo}`,
+          descricao: atividade.descricao || 'Atividade cadastrada',
+          data: atividade.data,
+          disciplina: disciplina.nome,
+          aulaId: aula.id,
+          aulaTitulo: aula.titulo,
+          badgeLabel: 'Atividade',
+        });
+      });
+
+      (aula.avaliacoes || []).forEach((avaliacao) => {
+        if (!avaliacao.data) return;
+
+        eventos.push({
+          id: `avaliacao-${disciplina.id}-${aula.id}-${avaliacao.id}`,
+          tipo: 'avaliacao',
+          titulo: avaliacao.titulo || `Avaliação - ${aula.titulo}`,
+          descricao: avaliacao.descricao || 'Avaliação cadastrada',
+          data: avaliacao.data,
+          disciplina: disciplina.nome,
+          aulaId: aula.id,
+          aulaTitulo: aula.titulo,
+          badgeLabel: 'Avaliação',
+        });
+      });
     });
+  });
 
-    // Ordenar no client-side
-    aulas.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
-    return aulas;
-  } catch (error) {
-    console.error('Erro ao listar aulas:', error);
-    return [];
-  }
-}
-
-/**
- * Lista aulas por disciplina (filtro no client-side)
- */
-export async function listarAulasPorDisciplina(disciplina: string): Promise<Aula[]> {
-  try {
-    const aulas = await listarAulas();
-    return aulas.filter(a => a.disciplina === disciplina);
-  } catch (error) {
-    console.error('Erro ao listar aulas por disciplina:', error);
-    return [];
-  }
-}
-
-/**
- * Lista aulas por tag (filtro no client-side)
- */
-export async function listarAulasPorTag(tag: string): Promise<Aula[]> {
-  try {
-    const aulas = await listarAulas();
-    return aulas.filter(a => a.tags?.includes(tag));
-  } catch (error) {
-    console.error('Erro ao listar aulas por tag:', error);
-    return [];
-  }
+  eventos.sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
+  return eventos;
 }

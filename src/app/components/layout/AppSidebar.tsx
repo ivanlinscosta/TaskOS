@@ -1,203 +1,156 @@
 import { Link, useLocation } from 'react-router';
-import { useAppStore } from '../../../stores/useAppStore';
 import {
   LayoutDashboard,
   GraduationCap,
-  Users,
-  BookOpen,
-  Calendar,
-  LayoutList,
   Sparkles,
-  Building2,
-  UserCheck,
+  BookOpen,
+  Users,
+  Calendar,
+  Kanban,
   MessageSquare,
   Video,
-  FolderOpen,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
+import { useAppStore } from '../../../stores/useAppStore';
 import { cn } from '../../../lib/utils';
-import { Button } from '../ui/button';
-import { Separator } from '../ui/separator';
 
 interface NavItem {
-  title: string;
-  href: string;
-  icon: any;
-  context?: 'fiap' | 'itau';
+  label: string;
+  icon: React.ElementType;
+  path: string;
+  contexts: Array<'fiap' | 'itau' | 'all'>;
 }
 
 const navItems: NavItem[] = [
-  { title: 'Dashboard', href: '/', icon: LayoutDashboard },
-  
-  // FIAP Section
-  { title: 'Alunos', href: '/fiap/students', icon: GraduationCap, context: 'fiap' },
-  { title: 'Aulas', href: '/fiap/lessons', icon: BookOpen, context: 'fiap' },
-  { title: 'Cronograma', href: '/fiap/schedule', icon: Calendar, context: 'fiap' },
-  { title: 'Kanban FIAP', href: '/fiap/kanban', icon: LayoutList, context: 'fiap' },
-  { title: 'IA FIAP', href: '/fiap/ai', icon: Sparkles, context: 'fiap' },
-  
-  // Itaú Section
-  { title: 'Analistas', href: '/itau/analysts', icon: Users, context: 'itau' },
-  { title: 'Feedbacks', href: '/itau/feedbacks', icon: MessageSquare, context: 'itau' },
-  { title: 'Reuniões', href: '/itau/meetings', icon: Video, context: 'itau' },
-  { title: 'Kanban Itaú', href: '/itau/kanban', icon: LayoutList, context: 'itau' },
-  { title: 'Materiais', href: '/itau/materials', icon: FolderOpen, context: 'itau' },
-  { title: 'IA Itaú', href: '/itau/ai', icon: Sparkles, context: 'itau' },
+  { label: 'Dashboard', icon: LayoutDashboard, path: '/', contexts: ['all'] },
+
+  { label: 'Alunos', icon: Users, path: '/fiap/alunos', contexts: ['fiap'] },
+  { label: 'Aulas', icon: BookOpen, path: '/fiap/aulas', contexts: ['fiap'] },
+  { label: 'Cronograma', icon: Calendar, path: '/fiap/cronograma', contexts: ['fiap'] },
+  { label: 'Kanban FIAP', icon: Kanban, path: '/fiap/kanban', contexts: ['fiap'] },
+
+  { label: 'Analistas', icon: Users, path: '/itau/analistas', contexts: ['itau'] },
+  { label: 'Feedbacks', icon: MessageSquare, path: '/itau/feedbacks', contexts: ['itau'] },
+  { label: 'Reuniões', icon: Video, path: '/itau/reunioes', contexts: ['itau'] },
+  { label: 'Kanban Itaú', icon: Kanban, path: '/itau/kanban', contexts: ['itau'] },
+
+  { label: 'AI Assistant', icon: Sparkles, path: '/ai', contexts: ['fiap', 'itau'] },
 ];
 
 export default function AppSidebar() {
   const location = useLocation();
-  const { sidebarCollapsed, toggleSidebar, contextMode } = useAppStore();
+  const { contextMode, sidebarCollapsed, toggleSidebar } = useAppStore();
 
-  const fiapItems = navItems.filter((item) => !item.context || item.context === 'fiap');
-  const itauItems = navItems.filter((item) => item.context === 'itau');
+  const visibleItems = navItems.filter((item) => {
+    if (item.contexts.includes('all')) return true;
+    return item.contexts.includes(contextMode);
+  });
 
   return (
     <aside
       className={cn(
-        'bg-sidebar border-r border-sidebar-border transition-all duration-300 flex flex-col',
+        'sticky top-0 flex h-screen flex-col border-r transition-all duration-300',
         sidebarCollapsed ? 'w-16' : 'w-64'
       )}
+      style={{
+        background: 'var(--theme-card)',
+        borderColor: 'var(--theme-border)',
+      }}
     >
-      {/* Logo */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
+      <div
+        className="flex h-16 items-center justify-between px-4"
+        style={{ borderBottom: '1px solid var(--theme-border)' }}
+      >
         {!sidebarCollapsed && (
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold">D</span>
+            <div
+              className="flex h-9 w-9 items-center justify-center rounded-xl font-bold shadow-sm"
+              style={{
+                background: 'var(--theme-accent)',
+                color: 'var(--theme-accent-foreground)',
+              }}
+            >
+              T
             </div>
-            <div>
-              <h1 className="font-bold text-sidebar-foreground">DualOS</h1>
-              <p className="text-xs text-muted-foreground">Personal OS</p>
+
+            <div className="leading-tight">
+              <span
+                className="block text-xl font-bold"
+                style={{ color: 'var(--theme-foreground)' }}
+              >
+                TaskOS
+              </span>
+              <span
+                className="text-xs"
+                style={{ color: 'var(--theme-muted-foreground)' }}
+              >
+                {contextMode === 'fiap' ? 'Education Mode' : 'Corporate Mode'}
+              </span>
             </div>
           </div>
         )}
-        <Button
-          variant="ghost"
-          size="icon"
+
+        <button
           onClick={toggleSidebar}
-          className="h-8 w-8"
+          className="rounded-lg p-1.5 transition-colors"
+          style={{ color: 'var(--theme-foreground)' }}
         >
           {sidebarCollapsed ? (
             <ChevronRight className="h-4 w-4" />
           ) : (
             <ChevronLeft className="h-4 w-4" />
           )}
-        </Button>
+        </button>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-3 space-y-6">
-        {/* Dashboard */}
-        <div>
-          {navItems
-            .filter((item) => !item.context)
-            .map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.href;
-              
-              return (
-                <Link
-                  key={item.href}
-                  to={item.href}
-                  className={cn(
-                    'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors',
-                    isActive
-                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                      : 'text-sidebar-foreground hover:bg-sidebar-accent/50',
-                    sidebarCollapsed && 'justify-center'
-                  )}
-                  title={sidebarCollapsed ? item.title : undefined}
-                >
-                  <Icon className="h-5 w-5 flex-shrink-0" />
-                  {!sidebarCollapsed && <span>{item.title}</span>}
-                </Link>
-              );
-            })}
-        </div>
+      <nav className="flex-1 overflow-y-auto p-3">
+        <div className="space-y-1">
+          {visibleItems.map((item) => {
+            const isActive =
+              location.pathname === item.path ||
+              (item.path !== '/' && location.pathname.startsWith(item.path));
 
-        <Separator />
-
-        {/* FIAP Section */}
-        <div>
-          {!sidebarCollapsed && (
-            <div className="flex items-center gap-2 px-3 mb-2">
-              <GraduationCap className="h-4 w-4 text-muted-foreground" />
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                FIAP
-              </span>
-            </div>
-          )}
-          {fiapItems
-            .filter((item) => item.context === 'fiap')
-            .map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.href;
-              
-              return (
-                <Link
-                  key={item.href}
-                  to={item.href}
-                  className={cn(
-                    'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors mb-1',
-                    isActive
-                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                      : 'text-sidebar-foreground hover:bg-sidebar-accent/50',
-                    sidebarCollapsed && 'justify-center'
-                  )}
-                  title={sidebarCollapsed ? item.title : undefined}
-                >
-                  <Icon className="h-5 w-5 flex-shrink-0" />
-                  {!sidebarCollapsed && <span className="text-sm">{item.title}</span>}
-                </Link>
-              );
-            })}
-        </div>
-
-        <Separator />
-
-        {/* Itaú Section */}
-        <div>
-          {!sidebarCollapsed && (
-            <div className="flex items-center gap-2 px-3 mb-2">
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                Itaú
-              </span>
-            </div>
-          )}
-          {itauItems.map((item) => {
             const Icon = item.icon;
-            const isActive = location.pathname === item.href;
-            
+
             return (
               <Link
-                key={item.href}
-                to={item.href}
+                key={item.path}
+                to={item.path}
                 className={cn(
-                  'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors mb-1',
-                  isActive
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                    : 'text-sidebar-foreground hover:bg-sidebar-accent/50',
+                  'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all',
                   sidebarCollapsed && 'justify-center'
                 )}
-                title={sidebarCollapsed ? item.title : undefined}
+                style={
+                  isActive
+                    ? {
+                        background: 'var(--theme-accent)',
+                        color: 'var(--theme-accent-foreground)',
+                        boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
+                      }
+                    : {
+                        color: 'var(--theme-foreground)',
+                      }
+                }
+                title={sidebarCollapsed ? item.label : undefined}
               >
-                <Icon className="h-5 w-5 flex-shrink-0" />
-                {!sidebarCollapsed && <span className="text-sm">{item.title}</span>}
+                <Icon className={cn('h-5 w-5 flex-shrink-0', isActive && 'scale-105')} />
+                {!sidebarCollapsed && <span>{item.label}</span>}
               </Link>
             );
           })}
         </div>
       </nav>
 
-      {/* Footer */}
       {!sidebarCollapsed && (
-        <div className="p-3 border-t border-sidebar-border">
-          <div className="text-xs text-muted-foreground text-center">
-            v1.0.0 • 2026
-          </div>
+        <div
+          className="p-4 text-center text-xs"
+          style={{
+            borderTop: '1px solid var(--theme-border)',
+            color: 'var(--theme-muted-foreground)',
+          }}
+        >
+          {contextMode === 'fiap' ? 'Education Mode' : 'Corporate Mode'}
         </div>
       )}
     </aside>

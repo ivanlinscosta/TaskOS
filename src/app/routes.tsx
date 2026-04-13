@@ -26,6 +26,10 @@ import { NovaTarefaItau } from "./pages/itau/nova-tarefa";
 import { AIAssistant } from "./pages/ai-assistant";
 import { Perfil } from "./pages/perfil";
 import { NotFound } from "./pages/not-found";
+import { DetalheAnalista } from "./pages/itau/detalhe-analista";
+import { DetalheAluno } from "./pages/fiap/detalhe-aluno";
+import { UsuariosLote } from "./pages/admin/usuarios-lote";
+import { EditarAula } from "./pages/fiap/editar-aula";
 
 
 export const router = createBrowserRouter([
@@ -57,10 +61,15 @@ export const router = createBrowserRouter([
       { path: "itau/kanban/nova", Component: NovaTarefaItau },
       { path: "ai", Component: AIAssistant },
       { path: "*", Component: NotFound },
+      { path: "itau/analistas/:id", Component: DetalheAnalista },
+      { path: "fiap/alunos/:id", Component: DetalheAluno },
+      { path: "admin/usuarios-lote", Component: UsuariosLote },
+      { path: "fiap/aulas/editar/:disciplinaId/:aulaId", Component: EditarAula },
     ],
   },
   {
     path: "/login",
     Component: Login,
   },
+  
 ]);

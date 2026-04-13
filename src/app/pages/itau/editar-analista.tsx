@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar'
 import { toast } from 'sonner';
 import * as analistasService from '../../../services/analistas-service';
 import { mockAnalistas } from '../../../lib/mock-data';
+import { criarNotificacao } from '../../../services/notifications-service';
 
 export function EditarAnalista() {
   const navigate = useNavigate();
@@ -178,6 +179,17 @@ export function EditarAnalista() {
 
       toast.success('Analista atualizado com sucesso!');
       navigate('/itau/analistas');
+
+      await criarNotificacao({
+      titulo: 'Novo feedback',
+      mensagem: `${analista.nome} recebeu uma avaliação`,
+      tipo: 'feedback',
+      lida: false,
+      contexto: 'itau',
+      userId: analista.id
+    });
+
+      
     } catch (error) {
       console.error('Erro ao atualizar analista:', error);
       toast.error('Erro ao atualizar analista');

@@ -5,8 +5,8 @@
 
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { type ClassValue, clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { type ClassValue, clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 /**
  * Combina classes CSS com tailwind-merge
@@ -38,15 +38,31 @@ export function getScoreBgColor(score: number): string {
 /**
  * Formata uma data para exibição
  */
-export function formatDate(date: Date, formatStr: string = "d 'de' MMMM 'de' yyyy"): string {
-  return format(date, formatStr, { locale: ptBR });
+export function formatDate(
+  date: Date | string,
+  formatStr: string = "d 'de' MMMM 'de' yyyy"
+): string {
+  const parsedDate = typeof date === 'string' ? new Date(date) : date;
+  return format(parsedDate, formatStr, { locale: ptBR });
 }
 
 /**
  * Formata hora
  */
-export function formatTime(date: Date): string {
-  return format(date, 'HH:mm');
+export function formatTime(date: Date | string): string {
+  const parsedDate = typeof date === 'string' ? new Date(date) : date;
+  return format(parsedDate, 'HH:mm');
+}
+
+/**
+ * Formata data e hora
+ */
+export function formatDateTime(
+  date: Date | string,
+  formatStr: string = "d 'de' MMM 'às' HH:mm"
+): string {
+  const parsedDate = typeof date === 'string' ? new Date(date) : date;
+  return format(parsedDate, formatStr, { locale: ptBR });
 }
 
 /**
@@ -72,7 +88,8 @@ export function calculatePercentage(value: number, total: number): number {
 export function getInitials(name: string): string {
   return name
     .split(' ')
-    .map(word => word[0])
+    .filter(Boolean)
+    .map((word) => word[0])
     .join('')
     .toUpperCase()
     .substring(0, 2);
@@ -109,10 +126,11 @@ export function isValidEmail(email: string): boolean {
  */
 export function getColorFromString(str: string): string {
   let hash = 0;
+
   for (let i = 0; i < str.length; i++) {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
   }
-  
+
   const colors = [
     '#EC7000', // Itaú Orange
     '#003A8F', // Itaú Blue
@@ -123,16 +141,18 @@ export function getColorFromString(str: string): string {
     '#EF4444', // Red
     '#8B5CF6', // Violet
   ];
-  
+
   return colors[Math.abs(hash) % colors.length];
 }
 
 /**
  * Calcula tempo decorrido desde uma data
  */
-export function getTimeAgo(date: Date): string {
+export function getTimeAgo(date: Date | string): string {
+  const parsedDate = typeof date === 'string' ? new Date(date) : date;
   const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
+
+  const diffMs = now.getTime() - parsedDate.getTime();
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
@@ -141,17 +161,21 @@ export function getTimeAgo(date: Date): string {
   if (diffMins < 60) return `${diffMins}m atrás`;
   if (diffHours < 24) return `${diffHours}h atrás`;
   if (diffDays < 7) return `${diffDays}d atrás`;
-  return formatDate(date, "d 'de' MMM");
+  return formatDate(parsedDate, "d 'de' MMM");
 }
 
 /**
  * Ordena array de objetos por propriedade
  */
-export function sortBy<T>(array: T[], key: keyof T, order: 'asc' | 'desc' = 'asc'): T[] {
+export function sortBy<T>(
+  array: T[],
+  key: keyof T,
+  order: 'asc' | 'desc' = 'asc'
+): T[] {
   return [...array].sort((a, b) => {
     const aVal = a[key];
     const bVal = b[key];
-    
+
     if (aVal < bVal) return order === 'asc' ? -1 : 1;
     if (aVal > bVal) return order === 'asc' ? 1 : -1;
     return 0;
@@ -179,7 +203,8 @@ export function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout;
+  let timeout: ReturnType<typeof setTimeout>;
+
   return (...args: Parameters<T>) => {
     clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);
@@ -209,27 +234,26 @@ export function calculateEfficiencyScore(
   feedbacksFeitos: number,
   aulasMinistradas: number
 ): number {
-  // Pesos: tarefas (3), reuniões (2), feedbacks (4), aulas (3)
-  const weighted = (
-    (tarefasConcluidas * 3) +
-    (reunioesRealizadas * 2) +
-    (feedbacksFeitos * 4) +
-    (aulasMinistradas * 3)
-  );
-  
-  // Normaliza para 0-100
-  const maxExpected = 50; // Score máximo esperado por semana
+  const weighted =
+    tarefasConcluidas * 3 +
+    reunioesRealizadas * 2 +
+    feedbacksFeitos * 4 +
+    aulasMinistradas * 3;
+
+  const maxExpected = 50;
   const score = Math.min(100, (weighted / maxExpected) * 100);
-  
+
   return Math.round(score);
 }
 
 /**
  * Detecta tipo de arquivo por extensão
  */
-export function getFileType(filename: string): 'pdf' | 'ppt' | 'doc' | 'video' | 'link' {
+export function getFileType(
+  filename: string
+): 'pdf' | 'ppt' | 'doc' | 'video' | 'link' {
   const ext = filename.split('.').pop()?.toLowerCase();
-  
+
   if (['pdf'].includes(ext || '')) return 'pdf';
   if (['ppt', 'pptx'].includes(ext || '')) return 'ppt';
   if (['doc', 'docx'].includes(ext || '')) return 'doc';
@@ -249,7 +273,7 @@ export function formatBytes(bytes: number, decimals: number = 2): string {
 
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 }
 
 /**
@@ -260,7 +284,7 @@ export function getPasswordStrength(password: string): {
   label: 'fraca' | 'média' | 'forte' | 'muito forte';
 } {
   let score = 0;
-  
+
   if (password.length >= 8) score++;
   if (password.length >= 12) score++;
   if (/[a-z]/.test(password)) score++;

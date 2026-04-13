@@ -1,294 +1,503 @@
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router';
-import { Sparkles, Send, User, Bot, Copy, Loader, ArrowLeft } from 'lucide-react';
-import { Button } from '../components/ui/button';
-import { Textarea } from '../components/ui/textarea';
-import { cn } from '../../lib/cn';
-import { toast } from 'sonner';
-import * as openaiService from '../../lib/openai-service';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Send, Sparkles, Loader, Bot, Image as ImageIcon, BarChart3 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from 'recharts';
 
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
+import { useAppStore } from '../../stores/useAppStore';
+import { useAuth } from '../../lib/auth-context';
+import {
+  askAssistant,
+  generateAssistantImage,
+  type AssistantMessage,
+} from '../../services/ai-assistant-service';
+import {
+  appendChatMessage,
+  loadMonthlyChatHistory,
+  type ChatMessage,
+} from '../../services/ai-history-service';
+import { loadUserChatPhoto } from '../../services/chat-profile-service';
+
+import { Card, CardContent } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
+import { getInitials } from '../../lib/utils';
+import { toast } from 'sonner';
+
+const PIE_COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#00C49F'];
+
+function AssistantChart({ chart }: { chart: NonNullable<ChatMessage['chart']> }) {
+  if (!chart) return null;
+
+  return (
+    <div
+      className="mt-3 overflow-hidden rounded-xl border"
+      style={{
+        borderColor: 'var(--theme-border)',
+        background: 'var(--theme-background)',
+      }}
+    >
+      <div
+        className="border-b px-3 py-2"
+        style={{ borderColor: 'var(--theme-border)' }}
+      >
+        <div className="flex items-center gap-2">
+          <BarChart3 className="h-4 w-4" style={{ color: 'var(--theme-accent)' }} />
+          <h4 className="text-xs font-semibold">{chart.title}</h4>
+        </div>
+        {chart.description ? (
+          <p className="mt-1 text-[11px] text-[var(--theme-muted-foreground)]">
+            {chart.description}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="h-64 w-full p-3">
+        <ResponsiveContainer width="100%" height="100%">
+          {chart.type === 'bar' ? (
+            <BarChart data={chart.data}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey={chart.xKey || 'label'} fontSize={11} />
+              <YAxis fontSize={11} />
+              <Tooltip />
+              <Legend />
+              {chart.series.map((s) => (
+                <Bar key={s.key} dataKey={s.key} name={s.label} radius={[4, 4, 0, 0]} />
+              ))}
+            </BarChart>
+          ) : chart.type === 'line' ? (
+            <LineChart data={chart.data}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey={chart.xKey || 'label'} fontSize={11} />
+              <YAxis fontSize={11} />
+              <Tooltip />
+              <Legend />
+              {chart.series.map((s) => (
+                <Line key={s.key} type="monotone" dataKey={s.key} name={s.label} strokeWidth={2} />
+              ))}
+            </LineChart>
+          ) : (
+            <PieChart>
+              <Tooltip />
+              <Legend />
+              <Pie
+                data={chart.data}
+                dataKey={chart.series[0]?.key || 'value'}
+                nameKey={chart.xKey || 'label'}
+                outerRadius={90}
+                label
+              >
+                {chart.data.map((_, index) => (
+                  <Cell key={index} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                ))}
+              </Pie>
+            </PieChart>
+          )}
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
 }
 
-const quickPrompts = [
-  {
-    id: 'plano-aula',
-    label: 'Plano de Aula',
-    prompt: 'Crie um plano de aula completo sobre Machine Learning para alunos de Ciência de Dados.',
-    icon: '📚',
-  },
-  {
-    id: 'avaliacao-aluno',
-    label: 'Avaliação de Aluno',
-    prompt: 'Gere uma avaliação completa para um aluno com nota 8.5.',
-    icon: '📝',
-  },
-  {
-    id: 'nova-aula',
-    label: 'Nova Aula',
-    prompt: 'Crie uma nova aula sobre Deep Learning com TensorFlow, com duração de 2 horas.',
-    icon: '🎓',
-  },
-  {
-    id: 'feedback',
-    label: 'Feedback de Time',
-    prompt: 'Gere um feedback estruturado para o time com recomendações de melhoria.',
-    icon: '💼',
-  },
-];
+function EmptyState({ contextMode }: { contextMode: 'fiap' | 'itau' }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+      <div
+        className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl"
+        style={{
+          background: 'var(--theme-background-secondary)',
+          color: 'var(--theme-accent)',
+        }}
+      >
+        <Sparkles className="h-6 w-6" />
+      </div>
+
+      <h2 className="text-lg font-semibold text-[var(--theme-foreground)]">
+        {contextMode === 'fiap' ? 'AI Assistant FIAP' : 'AI Assistant Itaú'}
+      </h2>
+
+      <p className="mt-2 max-w-2xl text-sm text-[var(--theme-muted-foreground)]">
+        {contextMode === 'fiap'
+          ? 'Peça ajuda com plano de aula, cronograma, avaliações, materiais, atividades e gestão acadêmica.'
+          : 'Peça ajuda com analistas, feedbacks, avaliações de desempenho, reuniões, tarefas e planos de ação.'}
+      </p>
+    </div>
+  );
+}
 
 export function AIAssistant() {
-  const navigate = useNavigate();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const { contextMode } = useAppStore();
+  const { user } = useAuth();
+
   const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isSending, setIsSending] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const [userChatPhoto, setUserChatPhoto] = useState('');
+
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  const title = useMemo(
+    () => (contextMode === 'fiap' ? 'AI Assistant FIAP' : 'AI Assistant Itaú'),
+    [contextMode]
+  );
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isLoading]);
+    if (!user?.uid) return;
+    void loadHistory();
+    void loadPhoto();
+  }, [user?.uid, contextMode]);
 
-  const handleSendMessage = async (text: string = input) => {
-    if (!text.trim() || isLoading) return;
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    scrollRef.current.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: 'smooth',
+    });
+  }, [messages, isSending]);
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
+  const loadPhoto = async () => {
+    if (!user?.uid) return;
+    const photo = await loadUserChatPhoto(user.uid, user);
+    setUserChatPhoto(photo);
+  };
+
+  const loadHistory = async () => {
+    if (!user?.uid) return;
+
+    try {
+      setIsLoadingHistory(true);
+      const history = await loadMonthlyChatHistory(user.uid, contextMode);
+      setMessages(history);
+    } catch (error) {
+      console.error(error);
+      toast.error('Erro ao carregar histórico do assistente');
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  const handleSend = async () => {
+    const prompt = input.trim();
+    if (!prompt || isSending || !user?.uid) return;
+
+    const userMessage: ChatMessage = {
       role: 'user',
-      content: text,
-      timestamp: new Date(),
+      text: prompt,
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
-    setIsLoading(true);
+    setIsSending(true);
 
     try {
-      const response = await openaiService.askAIAssistant(
-        text,
-        'fiap',
-        messages.map((m) => ({
-          role: m.role,
-          content: m.content,
-        }))
-      );
+      await appendChatMessage(user.uid, contextMode, userMessage);
 
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
+      const historyPayload: AssistantMessage[] = [...messages, userMessage].map((m) => ({
+        role: m.role,
+        text: m.text,
+      }));
+
+      const response = await askAssistant({
+        prompt,
+        contextMode,
+        history: historyPayload,
+      });
+
+      let imageUrl = '';
+
+      if (response.imageRequest?.shouldGenerate && response.imageRequest.prompt) {
+        try {
+          const generated = await generateAssistantImage({
+            prompt: response.imageRequest.prompt,
+            contextMode,
+          });
+          imageUrl = generated.imageDataUrl;
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      const assistantMessage: ChatMessage = {
         role: 'assistant',
-        content: response,
-        timestamp: new Date(),
+        text: response.markdown,
+        chart: response.chart,
+        imageUrl,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
+      await appendChatMessage(user.uid, contextMode, assistantMessage);
     } catch (error) {
-      console.error('Erro ao enviar mensagem:', error);
-      toast.error('Erro ao processar sua mensagem');
+      console.error(error);
+      toast.error('Erro ao consultar o AI Assistant');
+
+      const fallback: ChatMessage = {
+        role: 'assistant',
+        text: 'Não consegui responder agora. Tente novamente em instantes.',
+      };
+
+      setMessages((prev) => [...prev, fallback]);
+      await appendChatMessage(user.uid, contextMode, fallback);
     } finally {
-      setIsLoading(false);
+      setIsSending(false);
     }
   };
 
-  const handleQuickPrompt = (prompt: string) => {
-    handleSendMessage(prompt);
-  };
-
-  const handleCopyMessage = async (content: string) => {
-    try {
-      await navigator.clipboard.writeText(content);
-      toast.success('Copiado!');
-    } catch {
-      toast.error('Não foi possível copiar a mensagem');
+  const handleKeyDown: React.KeyboardEventHandler<HTMLTextAreaElement> = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      void handleSend();
     }
   };
 
   return (
-    <div className="w-full h-full min-h-0 bg-[var(--theme-background)] flex flex-col overflow-hidden">
-      {/* Header fixo */}
-      <div className="shrink-0 flex items-center gap-4 p-4 border-b border-[var(--theme-border)] bg-[var(--theme-background)]">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate('/')}
-          className="gap-2"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Voltar
-        </Button>
+    <div className="h-[calc(100vh-96px)] p-6">
+      <div className="mx-auto flex h-full max-w-7xl flex-col gap-3">
+        <div className="flex items-center gap-3">
+          <div
+            className="flex h-10 w-10 items-center justify-center rounded-2xl shadow-sm"
+            style={{
+              background: 'var(--theme-accent)',
+              color: 'var(--theme-accent-foreground)',
+            }}
+          >
+            <Sparkles className="h-5 w-5" />
+          </div>
 
-        <div className="flex items-center gap-2 min-w-0">
-          <Sparkles className="w-6 h-6 text-[var(--theme-accent)] shrink-0" />
-          <h1 className="text-xl font-bold text-[var(--theme-foreground)] truncate">
-            IA Assistant
-          </h1>
-        </div>
-      </div>
-
-      {/* Corpo: ocupa restante da tela sem criar scroll externo */}
-      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-        {/* Somente esta área deve rolar */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-4 bg-[var(--theme-background)]">
-          {messages.length === 0 ? (
-            <div className="max-w-2xl mx-auto w-full min-h-full flex flex-col justify-center">
-              <div className="text-center py-8">
-                <Sparkles className="w-16 h-16 text-[var(--theme-accent)] mx-auto mb-4" />
-                <h2 className="text-2xl font-bold text-[var(--theme-foreground)] mb-2">
-                  Bem-vindo ao IA Assistant
-                </h2>
-                <p className="text-[var(--theme-muted-foreground)]">
-                  Utilize o poder da IA para criar planos de aula, gerar avaliações,
-                  agendar reuniões e muito mais.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-2">
-                {quickPrompts.map((prompt) => (
-                  <button
-                    key={prompt.id}
-                    onClick={() => handleQuickPrompt(prompt.prompt)}
-                    className="p-4 rounded-lg border border-[var(--theme-border)] hover:bg-[var(--theme-background-secondary)] transition-all text-left"
-                  >
-                    <div className="flex items-start gap-3">
-                      <span className="text-2xl">{prompt.icon}</span>
-                      <div className="min-w-0">
-                        <p className="font-medium text-[var(--theme-foreground)]">
-                          {prompt.label}
-                        </p>
-                        <p className="text-xs text-[var(--theme-muted-foreground)] mt-1 line-clamp-2">
-                          {prompt.prompt}
-                        </p>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="max-w-2xl mx-auto w-full space-y-4">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={cn(
-                    'flex gap-3',
-                    message.role === 'user' ? 'justify-end' : 'justify-start'
-                  )}
-                >
-                  {message.role === 'assistant' && (
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[var(--theme-accent)] flex items-center justify-center">
-                      <Bot className="w-4 h-4 text-white" />
-                    </div>
-                  )}
-
-                  <div
-                    className={cn(
-                      'max-w-[80%] lg:max-w-[70%] xl:max-w-[65%] px-4 py-3 rounded-lg',
-                      message.role === 'user'
-                        ? 'bg-[var(--theme-accent)] text-white'
-                        : 'bg-[var(--theme-background-secondary)] text-[var(--theme-foreground)]'
-                    )}
-                  >
-                    <p className="text-sm whitespace-pre-wrap break-words">
-                      {message.content}
-                    </p>
-                    <p className="text-xs mt-2 opacity-70">
-                      {message.timestamp.toLocaleTimeString('pt-BR', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </p>
-                  </div>
-
-                  {message.role === 'assistant' && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleCopyMessage(message.content)}
-                      className="flex-shrink-0 self-start"
-                    >
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                  )}
-
-                  {message.role === 'user' && (
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[var(--theme-background-secondary)] flex items-center justify-center">
-                      <User className="w-4 h-4 text-[var(--theme-foreground)]" />
-                    </div>
-                  )}
-                </div>
-              ))}
-
-              {isLoading && (
-                <div className="flex gap-3 justify-start">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[var(--theme-accent)] flex items-center justify-center">
-                    <Loader className="w-4 h-4 text-white animate-spin" />
-                  </div>
-                  <div className="bg-[var(--theme-background-secondary)] px-4 py-2 rounded-lg">
-                    <p className="text-sm text-[var(--theme-muted-foreground)]">
-                      Processando...
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <div ref={messagesEndRef} />
-            </div>
-          )}
-        </div>
-
-        {/* Rodapé fixo */}
-        <div className="shrink-0 border-t border-[var(--theme-border)] p-4 bg-[var(--theme-background)]">
-          <div className="max-w-2xl mx-auto w-full space-y-3">
-            {messages.length > 0 && (
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {quickPrompts.map((prompt) => (
-                  <button
-                    key={prompt.id}
-                    onClick={() => handleQuickPrompt(prompt.prompt)}
-                    disabled={isLoading}
-                    className="flex-shrink-0 px-3 py-1 rounded-full bg-[var(--theme-background-secondary)] hover:bg-[var(--theme-accent)] hover:text-white transition-all text-xs font-medium disabled:opacity-50 whitespace-nowrap"
-                  >
-                    {prompt.icon} {prompt.label}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            <div className="flex gap-2 items-end">
-              <Textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }
-                }}
-                placeholder="Digite sua pergunta ou solicitação..."
-                className="flex-1 min-h-12 max-h-24 resize-none"
-                disabled={isLoading}
-              />
-
-              <Button
-                onClick={() => handleSendMessage()}
-                disabled={isLoading || !input.trim()}
-                className="flex-shrink-0 gap-2 h-12"
-              >
-                {isLoading ? (
-                  <Loader className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
-              </Button>
-            </div>
-
-            <p className="text-xs text-[var(--theme-muted-foreground)] text-center">
-              Pressione Shift+Enter para nova linha
+          <div>
+            <h1 className="text-2xl font-bold text-[var(--theme-foreground)]">{title}</h1>
+            <p className="text-xs text-[var(--theme-muted-foreground)]">
+              Assistente contextual com histórico, imagens e gráficos
             </p>
           </div>
+
+          <Badge variant="outline" className="ml-auto text-[11px]">
+            {contextMode === 'fiap' ? 'Contexto FIAP' : 'Contexto Itaú'}
+          </Badge>
         </div>
+
+        <Card
+          className="flex h-full min-h-0 flex-col overflow-hidden rounded-[24px] border shadow-sm"
+          style={{
+            borderColor: 'var(--theme-border)',
+            background: 'var(--theme-card)',
+          }}
+        >
+          <div
+            className="flex shrink-0 items-center justify-between border-b px-4 py-3"
+            style={{ borderColor: 'var(--theme-border)' }}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className="flex h-8 w-8 items-center justify-center rounded-full"
+                style={{
+                  background: 'var(--theme-background-secondary)',
+                  color: 'var(--theme-accent)',
+                }}
+              >
+                <Bot className="h-4 w-4" />
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold text-[var(--theme-foreground)]">
+                  {contextMode === 'fiap' ? 'Agente FIAP' : 'Agente Itaú'}
+                </p>
+                <p className="text-[11px] text-[var(--theme-muted-foreground)]">
+                  Respostas com contexto do sistema
+                </p>
+              </div>
+            </div>
+
+            <div className="hidden items-center gap-2 md:flex">
+              <Badge variant="outline" className="text-[11px]">Texto</Badge>
+              <Badge variant="outline" className="text-[11px]">Gráficos</Badge>
+              <Badge variant="outline" className="text-[11px]">Imagens</Badge>
+            </div>
+          </div>
+
+          <CardContent className="flex min-h-0 flex-1 flex-col p-0">
+            <div
+              ref={scrollRef}
+              className="min-h-0 flex-1 overflow-y-auto px-3 py-4"
+            >
+              {isLoadingHistory ? (
+                <div className="flex h-full items-center justify-center">
+                  <Loader className="h-6 w-6 animate-spin" />
+                </div>
+              ) : messages.length === 0 ? (
+                <EmptyState contextMode={contextMode} />
+              ) : (
+                <div className="mx-auto flex w-full max-w-none flex-col gap-4">
+                  {messages.map((message, index) => {
+                    const isUser = message.role === 'user';
+
+                    return (
+                      <div
+                        key={`${message.role}-${index}`}
+                        className={`flex items-start gap-2 ${isUser ? 'justify-end' : 'justify-start'}`}
+                      >
+                        {!isUser && (
+                          <Avatar className="mt-1 h-8 w-8 shrink-0 border border-[var(--theme-border)]">
+                            <AvatarFallback
+                              style={{
+                                background: 'var(--theme-accent)',
+                                color: 'var(--theme-accent-foreground)',
+                              }}
+                            >
+                              AI
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
+
+                        <div
+                          className={`max-w-[82%] rounded-[18px] px-4 py-3 shadow-sm ${
+                            isUser ? 'rounded-tr-md' : 'rounded-tl-md'
+                          }`}
+                          style={
+                            isUser
+                              ? {
+                                  background: 'var(--theme-accent)',
+                                  color: 'var(--theme-accent-foreground)',
+                                }
+                              : {
+                                  background: 'var(--theme-background)',
+                                  color: 'var(--theme-foreground)',
+                                  border: '1px solid var(--theme-border)',
+                                }
+                          }
+                        >
+                          <div className="prose prose-sm max-w-none text-[12px] leading-5">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {message.text}
+                            </ReactMarkdown>
+                          </div>
+
+                          {message.imageUrl ? (
+                            <div className="mt-3 overflow-hidden rounded-xl border border-[var(--theme-border)] bg-[var(--theme-card)]">
+                              <div className="flex items-center gap-2 border-b border-[var(--theme-border)] px-3 py-2">
+                                <ImageIcon className="h-4 w-4" style={{ color: 'var(--theme-accent)' }} />
+                                <span className="text-xs font-medium">Imagem gerada</span>
+                              </div>
+                              <img
+                                src={message.imageUrl}
+                                alt="Imagem gerada pelo assistente"
+                                className="max-h-[320px] w-full object-contain"
+                              />
+                            </div>
+                          ) : null}
+
+                          {message.chart ? <AssistantChart chart={message.chart} /> : null}
+                        </div>
+
+                        {isUser && (
+                          <Avatar className="mt-1 h-8 w-8 shrink-0 border border-[var(--theme-border)]">
+                            {userChatPhoto ? (
+                              <AvatarImage src={userChatPhoto} />
+                            ) : (
+                              <AvatarFallback
+                                style={{
+                                  background: 'var(--theme-background-secondary)',
+                                  color: 'var(--theme-foreground)',
+                                }}
+                              >
+                                {getInitials(user?.displayName || 'Você')}
+                              </AvatarFallback>
+                            )}
+                          </Avatar>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {isSending && (
+                    <div className="flex items-start gap-2">
+                      <Avatar className="mt-1 h-8 w-8 shrink-0 border border-[var(--theme-border)]">
+                        <AvatarFallback
+                          style={{
+                            background: 'var(--theme-accent)',
+                            color: 'var(--theme-accent-foreground)',
+                          }}
+                        >
+                          AI
+                        </AvatarFallback>
+                      </Avatar>
+
+                      <div
+                        className="rounded-[18px] rounded-tl-md border px-4 py-3"
+                        style={{
+                          background: 'var(--theme-background)',
+                          borderColor: 'var(--theme-border)',
+                        }}
+                      >
+                        <span className="inline-flex items-center gap-2 text-[12px] text-[var(--theme-muted-foreground)]">
+                          <Loader className="h-4 w-4 animate-spin" />
+                          Pensando...
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div
+              className="shrink-0 border-t px-4 py-3"
+              style={{
+                borderColor: 'var(--theme-border)',
+                background: 'var(--theme-card)',
+              }}
+            >
+              <div className="mx-auto w-full max-w-none">
+                <div className="flex items-end gap-3">
+                  <textarea
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder={
+                      contextMode === 'fiap'
+                        ? 'Pergunte sobre plano de aula, cronograma, materiais ou avaliações...'
+                        : 'Pergunte sobre analistas, feedbacks, reuniões ou planos de ação...'
+                    }
+                    rows={1}
+                    className="min-h-[38px] flex-1 resize-none overflow-hidden border-0 border-b bg-transparent px-0 py-2 text-[12px] outline-none placeholder:text-[12px]"
+                    style={{
+                      color: 'var(--theme-foreground)',
+                      borderColor: 'var(--theme-border)',
+                    }}
+                  />
+
+                  <Button
+                    onClick={() => void handleSend()}
+                    disabled={isSending || !input.trim()}
+                    className="h-9 shrink-0 gap-2 rounded-lg px-4 text-xs"
+                  >
+                    {isSending ? (
+                      <Loader className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Send className="h-3.5 w-3.5" />
+                    )}
+                    Enviar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

@@ -60,8 +60,8 @@ export function PersonSummaryCard({
       .join('');
   }, [name]);
 
-  const SubtitleIcon = variant === 'student' ? GraduationCap : Briefcase;
   const hasValidImage = !!image && !imgError;
+  const SubtitleIcon = variant === 'student' ? GraduationCap : Briefcase;
 
   return (
     <Card className="group h-[440px] overflow-hidden rounded-2xl border bg-[var(--theme-card)] shadow-sm transition-all hover:shadow-lg">
@@ -74,7 +74,11 @@ export function PersonSummaryCard({
                 onError={() => setImgError(true)}
               />
               <AvatarFallback className="bg-[var(--theme-background-secondary)]">
-                {hasValidImage ? initials : <User className="h-8 w-8 text-[var(--theme-muted-foreground)]" />}
+                {hasValidImage ? (
+                  initials
+                ) : (
+                  <User className="h-8 w-8 text-[var(--theme-muted-foreground)]" />
+                )}
               </AvatarFallback>
             </Avatar>
           </div>
@@ -82,6 +86,7 @@ export function PersonSummaryCard({
           <button
             onClick={onEdit}
             className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full border bg-white shadow"
+            type="button"
           >
             <Pencil className="h-3 w-3" />
           </button>
@@ -102,6 +107,11 @@ export function PersonSummaryCard({
           <div className="flex items-center gap-1 text-xs text-[var(--theme-muted-foreground)]">
             <Mail className="h-3 w-3" />
             <span className="truncate">{email}</span>
+          </div>
+
+          <div className="flex items-center gap-1 text-xs text-[var(--theme-muted-foreground)]">
+            <SubtitleIcon className="h-3 w-3" />
+            <span className="truncate">{subtitle}</span>
           </div>
 
           <div className="flex flex-wrap gap-1 pt-2">
@@ -136,6 +146,7 @@ export function PersonSummaryCard({
 
         <div className="pt-2">
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               onAction();
