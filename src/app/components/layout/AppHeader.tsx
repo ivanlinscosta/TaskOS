@@ -5,7 +5,7 @@ import { getDownloadURL, ref } from 'firebase/storage';
 import { useAppStore } from '../../../stores/useAppStore';
 import { useAuth } from '../../../lib/auth-context';
 import { db, storage } from '../../../lib/firebase-config';
-import { Search, Bell, User, LogOut, Settings } from 'lucide-react';
+import { Search, Bell, User, LogOut, Settings, Home } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -172,7 +172,7 @@ export function Header() {
     photoURL: '',
   };
 
-  const handleContextSwitch = (mode: 'fiap' | 'itau') => {
+  const handleContextSwitch = (mode: 'fiap' | 'itau' | 'pessoal') => {
     setContextMode(mode);
   };
 
@@ -278,6 +278,29 @@ export function Header() {
           >
             <img src={itauLogo} alt="Itaú" className="h-3.5 w-auto object-contain" />
             Itaú
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleContextSwitch('pessoal')}
+            className={cn(
+              'h-8 gap-2 rounded-lg px-3 text-xs',
+              contextMode === 'pessoal' && 'shadow-sm'
+            )}
+            style={
+              contextMode === 'pessoal'
+                ? {
+                    background: '#059669',
+                    color: '#FFFFFF',
+                  }
+                : {
+                    color: 'var(--theme-muted-foreground)',
+                  }
+            }
+          >
+            <Home className="h-3.5 w-3.5" />
+            Pessoal
           </Button>
         </div>
 

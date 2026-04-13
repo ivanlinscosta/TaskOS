@@ -300,6 +300,69 @@ export interface AIInsight {
   action?: string;
 }
 
+// ============================================
+// Vida Pessoal Types
+// ============================================
+
+export interface Viagem {
+  id?: string;
+  destino: string;
+  descricao?: string;
+  dataIda: Date;
+  dataVolta?: Date;
+  orcamento: number;
+  gastoReal?: number;
+  status: 'planejada' | 'em_andamento' | 'concluida' | 'cancelada';
+  atividades?: string[];
+  notas?: string;
+  foto?: string;
+  criadoEm?: Date;
+  atualizadoEm?: Date;
+}
+
+export interface Custo {
+  id?: string;
+  descricao: string;
+  valor: number;
+  categoria: 'alimentacao' | 'transporte' | 'lazer' | 'saude' | 'moradia' | 'educacao' | 'vestuario' | 'outros';
+  tipo: 'fixa' | 'variavel';
+  data: Date;
+  viagemId?: string;
+  comprovante?: string;
+  notas?: string;
+  criadoEm?: Date;
+}
+
+export interface TarefaPessoal {
+  id?: string;
+  titulo: string;
+  descricao?: string;
+  status: 'backlog' | 'doing' | 'done';
+  prioridade: 'baixa' | 'media' | 'alta';
+  categoria: 'pessoal' | 'saude' | 'financeiro' | 'casa' | 'familia' | 'outros';
+  dataVencimento?: Date;
+  checklist?: { id: string; texto: string; concluido: boolean }[];
+  tags?: string[];
+  criadoEm?: Date;
+  atualizadoEm?: Date;
+}
+
+// ============================================
+// WhatsApp Types
+// ============================================
+
+export interface WhatsAppMensagem {
+  id?: string;
+  de: string;
+  corpo: string;
+  tipoComando?: 'tarefa' | 'reuniao' | 'aula' | 'feedback' | 'viagem' | 'custo' | 'desconhecido';
+  entidadeCriada?: string;
+  entidadeId?: string;
+  processada: boolean;
+  erro?: string;
+  recebidasEm: Date;
+}
+
 export interface Notification {
   id: string;
   type: 'meeting' | 'task' | 'lesson' | 'feedback';

@@ -44,6 +44,12 @@ export const COLLECTIONS = {
   USUARIOS: 'usuarios',
   MATERIAIS: 'materiais',
   NOTIFICACOES: 'notificacoes',
+  // Vida Pessoal
+  VIAGENS: 'viagens',
+  CUSTOS: 'custos',
+  TAREFAS_PESSOAIS: 'tarefas_pessoais',
+  // WhatsApp
+  WHATSAPP_MENSAGENS: 'whatsapp_mensagens',
 } as const;
 
 export { analytics };

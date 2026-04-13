@@ -11,6 +11,11 @@ import {
   Video,
   ChevronLeft,
   ChevronRight,
+  Plane,
+  Wallet,
+  CheckSquare,
+  MessageCircle,
+  Home,
 } from 'lucide-react';
 import { useAppStore } from '../../../stores/useAppStore';
 import { cn } from '../../../lib/utils';
@@ -19,24 +24,41 @@ interface NavItem {
   label: string;
   icon: React.ElementType;
   path: string;
-  contexts: Array<'fiap' | 'itau' | 'all'>;
+  contexts: Array<'fiap' | 'itau' | 'pessoal' | 'all'>;
 }
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/', contexts: ['all'] },
 
+  // FIAP
   { label: 'Alunos', icon: Users, path: '/fiap/alunos', contexts: ['fiap'] },
   { label: 'Aulas', icon: BookOpen, path: '/fiap/aulas', contexts: ['fiap'] },
   { label: 'Cronograma', icon: Calendar, path: '/fiap/cronograma', contexts: ['fiap'] },
   { label: 'Kanban FIAP', icon: Kanban, path: '/fiap/kanban', contexts: ['fiap'] },
 
+  // Itaú
   { label: 'Analistas', icon: Users, path: '/itau/analistas', contexts: ['itau'] },
   { label: 'Feedbacks', icon: MessageSquare, path: '/itau/feedbacks', contexts: ['itau'] },
   { label: 'Reuniões', icon: Video, path: '/itau/reunioes', contexts: ['itau'] },
   { label: 'Kanban Itaú', icon: Kanban, path: '/itau/kanban', contexts: ['itau'] },
 
-  { label: 'AI Assistant', icon: Sparkles, path: '/ai', contexts: ['fiap', 'itau'] },
+  // Vida Pessoal
+  { label: 'Visão Geral', icon: Home, path: '/pessoal', contexts: ['pessoal'] },
+  { label: 'Viagens', icon: Plane, path: '/pessoal/viagens', contexts: ['pessoal'] },
+  { label: 'Finanças', icon: Wallet, path: '/pessoal/custos', contexts: ['pessoal'] },
+  { label: 'Tarefas', icon: CheckSquare, path: '/pessoal/tarefas', contexts: ['pessoal'] },
+
+  // Shared
+  { label: 'AI Assistant', icon: Sparkles, path: '/ai', contexts: ['fiap', 'itau', 'pessoal'] },
+  { label: 'WhatsApp', icon: MessageCircle, path: '/whatsapp', contexts: ['fiap', 'itau', 'pessoal'] },
 ];
+
+const modeLabels: Record<string, string> = {
+  fiap: 'Education Mode',
+  itau: 'Corporate Mode',
+  pessoal: 'Personal Mode',
+  admin: 'Admin Mode',
+};
 
 export default function AppSidebar() {
   const location = useLocation();
@@ -44,7 +66,7 @@ export default function AppSidebar() {
 
   const visibleItems = navItems.filter((item) => {
     if (item.contexts.includes('all')) return true;
-    return item.contexts.includes(contextMode);
+    return item.contexts.includes(contextMode as any);
   });
 
   return (
@@ -85,7 +107,7 @@ export default function AppSidebar() {
                 className="text-xs"
                 style={{ color: 'var(--theme-muted-foreground)' }}
               >
-                {contextMode === 'fiap' ? 'Education Mode' : 'Corporate Mode'}
+                {modeLabels[contextMode] || 'Mode'}
               </span>
             </div>
           </div>
@@ -150,7 +172,7 @@ export default function AppSidebar() {
             color: 'var(--theme-muted-foreground)',
           }}
         >
-          {contextMode === 'fiap' ? 'Education Mode' : 'Corporate Mode'}
+          {modeLabels[contextMode] || 'Mode'}
         </div>
       )}
     </aside>

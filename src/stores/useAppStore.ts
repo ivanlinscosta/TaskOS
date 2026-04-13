@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type ContextMode = 'fiap' | 'itau' | 'admin' ;
+export type ContextMode = 'fiap' | 'itau' | 'admin' | 'pessoal';
 
 interface AppState {
   contextMode: ContextMode;
@@ -25,6 +25,7 @@ export const useAppStore = create<AppState>()(
     (set) => ({
       contextMode: 'fiap',
       sidebarCollapsed: false,
+
       user: {
         name: 'Dr. Rafael Santos',
         email: 'rafael.santos@fiap.com.br',

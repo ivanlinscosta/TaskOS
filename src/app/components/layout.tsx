@@ -11,7 +11,7 @@ export function Layout() {
     <div
       className={cn(
         'flex h-screen bg-[var(--theme-background)] text-[var(--theme-foreground)]',
-        contextMode === 'fiap' ? 'theme-fiap' : 'theme-itau'
+        contextMode === 'fiap' ? 'theme-fiap' : contextMode === 'pessoal' ? 'theme-pessoal' : 'theme-itau'
       )}
     >
       <AppSidebar />

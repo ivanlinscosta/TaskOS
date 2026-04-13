@@ -30,6 +30,16 @@ import { DetalheAnalista } from "./pages/itau/detalhe-analista";
 import { DetalheAluno } from "./pages/fiap/detalhe-aluno";
 import { UsuariosLote } from "./pages/admin/usuarios-lote";
 import { EditarAula } from "./pages/fiap/editar-aula";
+// Vida Pessoal
+import { PessoalIndex } from "./pages/pessoal/index";
+import { Viagens } from "./pages/pessoal/viagens";
+import { NovaViagem } from "./pages/pessoal/nova-viagem";
+import { DetalheViagem } from "./pages/pessoal/detalhe-viagem";
+import { Custos } from "./pages/pessoal/custos";
+import { NovoCusto } from "./pages/pessoal/novo-custo";
+import { TarefasPessoais } from "./pages/pessoal/tarefas";
+// WhatsApp
+import { WhatsAppIntegracao } from "./pages/whatsapp";
 
 
 export const router = createBrowserRouter([
@@ -39,6 +49,8 @@ export const router = createBrowserRouter([
     children: [
       { index: true, Component: Dashboard },
       { path: "perfil", Component: Perfil },
+
+      // FIAP
       { path: "fiap", Component: FIAPIndex },
       { path: "fiap/aulas", Component: Aulas },
       { path: "fiap/aulas/nova", Component: NovaAula },
@@ -49,6 +61,10 @@ export const router = createBrowserRouter([
       { path: "fiap/cronograma", Component: Cronograma },
       { path: "fiap/kanban", Component: KanbanFIAP },
       { path: "fiap/kanban/nova", Component: NovaTarefaFIAP },
+      { path: "fiap/alunos/:id", Component: DetalheAluno },
+      { path: "fiap/aulas/editar/:disciplinaId/:aulaId", Component: EditarAula },
+
+      // Itaú
       { path: "itau", Component: ItauIndex },
       { path: "itau/analistas", Component: Analistas },
       { path: "itau/analistas/novo", Component: NovoAnalista },
@@ -59,17 +75,30 @@ export const router = createBrowserRouter([
       { path: "itau/reunioes/nova", Component: NovaReuniao },
       { path: "itau/kanban", Component: KanbanItau },
       { path: "itau/kanban/nova", Component: NovaTarefaItau },
-      { path: "ai", Component: AIAssistant },
-      { path: "*", Component: NotFound },
       { path: "itau/analistas/:id", Component: DetalheAnalista },
-      { path: "fiap/alunos/:id", Component: DetalheAluno },
+
+      // Vida Pessoal
+      { path: "pessoal", Component: PessoalIndex },
+      { path: "pessoal/viagens", Component: Viagens },
+      { path: "pessoal/viagens/nova", Component: NovaViagem },
+      { path: "pessoal/viagens/:id", Component: DetalheViagem },
+      { path: "pessoal/custos", Component: Custos },
+      { path: "pessoal/custos/novo", Component: NovoCusto },
+      { path: "pessoal/tarefas", Component: TarefasPessoais },
+
+      // Shared
+      { path: "ai", Component: AIAssistant },
+      { path: "whatsapp", Component: WhatsAppIntegracao },
+
+      // Admin
       { path: "admin/usuarios-lote", Component: UsuariosLote },
-      { path: "fiap/aulas/editar/:disciplinaId/:aulaId", Component: EditarAula },
+
+      { path: "*", Component: NotFound },
     ],
   },
   {
     path: "/login",
     Component: Login,
   },
-  
+
 ]);

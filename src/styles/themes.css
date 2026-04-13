@@ -36,6 +36,24 @@
   --theme-hover: rgba(236, 112, 0, 0.08);
 }
 
+/* Tema Pessoal (Personal Mode - Verde Esmeralda) */
+.theme-pessoal {
+  --theme-primary: #059669;
+  --theme-secondary: #0284C7;
+  --theme-background: #FFFFFF;
+  --theme-background-secondary: #F0FDF4;
+  --theme-foreground: #1A1A1A;
+  --theme-card: #FFFFFF;
+  --theme-card-foreground: #1A1A1A;
+  --theme-border: rgba(0, 0, 0, 0.1);
+  --theme-muted: #D1FAE5;
+  --theme-muted-foreground: #6B7280;
+  --theme-accent: #059669;
+  --theme-accent-foreground: #FFFFFF;
+  --theme-glow: rgba(5, 150, 105, 0);
+  --theme-hover: rgba(5, 150, 105, 0.08);
+}
+
 /* Glow effects para FIAP */
 .theme-fiap .glow-effect {
   box-shadow: 0 0 20px var(--theme-glow), 0 0 40px rgba(106, 13, 173, 0.3);
