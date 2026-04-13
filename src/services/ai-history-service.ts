@@ -33,13 +33,13 @@ function getMonthKey(date = new Date()) {
   return `${year}${month}`;
 }
 
-function getConversationDocId(userId: string, contextMode: 'fiap' | 'itau') {
+function getConversationDocId(userId: string, contextMode: 'fiap' | 'itau' | 'pessoal') {
   return `${userId}_${contextMode}_${getMonthKey()}`;
 }
 
 export async function loadMonthlyChatHistory(
   userId: string,
-  contextMode: 'fiap' | 'itau'
+  contextMode: 'fiap' | 'itau' | 'pessoal'
 ): Promise<ChatMessage[]> {
   const conversationId = getConversationDocId(userId, contextMode);
 
@@ -55,7 +55,7 @@ export async function loadMonthlyChatHistory(
 
 export async function appendChatMessage(
   userId: string,
-  contextMode: 'fiap' | 'itau',
+  contextMode: 'fiap' | 'itau' | 'pessoal',
   message: ChatMessage
 ) {
   const conversationId = getConversationDocId(userId, contextMode);

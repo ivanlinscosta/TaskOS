@@ -54,7 +54,7 @@ function getCallableUrl(name: string) {
 
 export async function askAssistant(params: {
   prompt: string;
-  contextMode: 'fiap' | 'itau';
+  contextMode: 'fiap' | 'itau' | 'pessoal';
   history: AssistantMessage[];
 }) {
   const functions = getFunctionsInstance();
@@ -70,7 +70,7 @@ export async function askAssistant(params: {
 
 export async function generateAssistantImage(params: {
   prompt: string;
-  contextMode: 'fiap' | 'itau';
+  contextMode: 'fiap' | 'itau' | 'pessoal';
 }) {
   const functions = getFunctionsInstance();
 

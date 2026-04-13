@@ -114,7 +114,43 @@ function AssistantChart({ chart }: { chart: NonNullable<ChatMessage['chart']> })
   );
 }
 
-function EmptyState({ contextMode }: { contextMode: 'fiap' | 'itau' }) {
+const CONTEXT_CONFIG = {
+  fiap: {
+    title: 'AI Assistant FIAP',
+    agente: 'Agente FIAP',
+    badge: 'Contexto FIAP',
+    placeholder: 'Pergunte sobre plano de aula, cronograma, materiais ou avaliações...',
+    description: 'Peça ajuda com plano de aula, cronograma, avaliações, materiais, atividades e gestão acadêmica.',
+  },
+  itau: {
+    title: 'AI Assistant Itaú',
+    agente: 'Agente Itaú',
+    badge: 'Contexto Itaú',
+    placeholder: 'Pergunte sobre analistas, feedbacks, reuniões ou planos de ação...',
+    description: 'Peça ajuda com analistas, feedbacks, avaliações de desempenho, reuniões, tarefas e planos de ação.',
+  },
+  pessoal: {
+    title: 'AI Assistant Pessoal',
+    agente: 'Assistente Pessoal',
+    badge: 'Contexto Pessoal',
+    placeholder: 'Pergunte sobre suas viagens, gastos, tarefas do dia a dia ou finanças pessoais...',
+    description: 'Peça ajuda com viagens, controle de gastos por categoria, organização de tarefas e dicas financeiras.',
+  },
+  admin: {
+    title: 'AI Assistant',
+    agente: 'Agente Admin',
+    badge: 'Contexto Admin',
+    placeholder: 'Digite sua pergunta...',
+    description: 'Assistente de administração do sistema.',
+  },
+};
+
+function getCtx(contextMode: string) {
+  return CONTEXT_CONFIG[contextMode as keyof typeof CONTEXT_CONFIG] ?? CONTEXT_CONFIG.itau;
+}
+
+function EmptyState({ contextMode }: { contextMode: string }) {
+  const ctx = getCtx(contextMode);
   return (
     <div className="flex h-full flex-col items-center justify-center px-6 text-center">
       <div
@@ -128,13 +164,11 @@ function EmptyState({ contextMode }: { contextMode: 'fiap' | 'itau' }) {
       </div>
 
       <h2 className="text-lg font-semibold text-[var(--theme-foreground)]">
-        {contextMode === 'fiap' ? 'AI Assistant FIAP' : 'AI Assistant Itaú'}
+        {ctx.title}
       </h2>
 
       <p className="mt-2 max-w-2xl text-sm text-[var(--theme-muted-foreground)]">
-        {contextMode === 'fiap'
-          ? 'Peça ajuda com plano de aula, cronograma, avaliações, materiais, atividades e gestão acadêmica.'
-          : 'Peça ajuda com analistas, feedbacks, avaliações de desempenho, reuniões, tarefas e planos de ação.'}
+        {ctx.description}
       </p>
     </div>
   );
@@ -152,10 +186,7 @@ export function AIAssistant() {
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  const title = useMemo(
-    () => (contextMode === 'fiap' ? 'AI Assistant FIAP' : 'AI Assistant Itaú'),
-    [contextMode]
-  );
+  const title = useMemo(() => getCtx(contextMode).title, [contextMode]);
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -287,7 +318,7 @@ export function AIAssistant() {
           </div>
 
           <Badge variant="outline" className="ml-auto text-[11px]">
-            {contextMode === 'fiap' ? 'Contexto FIAP' : 'Contexto Itaú'}
+            {getCtx(contextMode).badge}
           </Badge>
         </div>
 
@@ -315,7 +346,7 @@ export function AIAssistant() {
 
               <div>
                 <p className="text-sm font-semibold text-[var(--theme-foreground)]">
-                  {contextMode === 'fiap' ? 'Agente FIAP' : 'Agente Itaú'}
+                  {getCtx(contextMode).agente}
                 </p>
                 <p className="text-[11px] text-[var(--theme-muted-foreground)]">
                   Respostas com contexto do sistema
@@ -468,11 +499,7 @@ export function AIAssistant() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder={
-                      contextMode === 'fiap'
-                        ? 'Pergunte sobre plano de aula, cronograma, materiais ou avaliações...'
-                        : 'Pergunte sobre analistas, feedbacks, reuniões ou planos de ação...'
-                    }
+                    placeholder={getCtx(contextMode).placeholder}
                     rows={1}
                     className="min-h-[38px] flex-1 resize-none overflow-hidden border-0 border-b bg-transparent px-0 py-2 text-[12px] outline-none placeholder:text-[12px]"
                     style={{
