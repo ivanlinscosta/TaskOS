@@ -24,11 +24,11 @@ interface NavItem {
   label: string;
   icon: React.ElementType;
   path: string;
-  contexts: Array<'fiap' | 'itau' | 'pessoal' | 'all'>;
+  contexts: Array<'fiap' | 'itau' | 'pessoal' | 'admin'>;
 }
 
 const navItems: NavItem[] = [
-  { label: 'Dashboard', icon: LayoutDashboard, path: '/', contexts: ['all'] },
+  { label: 'Dashboard', icon: LayoutDashboard, path: '/', contexts: ['fiap', 'itau'] },
 
   // FIAP
   { label: 'Alunos', icon: Users, path: '/fiap/alunos', contexts: ['fiap'] },
@@ -49,8 +49,8 @@ const navItems: NavItem[] = [
   { label: 'Tarefas', icon: CheckSquare, path: '/pessoal/tarefas', contexts: ['pessoal'] },
 
   // Shared
-  { label: 'AI Assistant', icon: Sparkles, path: '/ai', contexts: ['fiap', 'itau', 'pessoal'] },
-  { label: 'WhatsApp', icon: MessageCircle, path: '/whatsapp', contexts: ['fiap', 'itau', 'pessoal'] },
+  { label: 'AI Assistant', icon: Sparkles, path: '/ai', contexts: ['fiap', 'itau', 'pessoal', 'admin'] },
+  { label: 'WhatsApp', icon: MessageCircle, path: '/whatsapp', contexts: ['fiap', 'itau', 'pessoal', 'admin'] },
 ];
 
 const modeLabels: Record<string, string> = {
@@ -64,10 +64,9 @@ export default function AppSidebar() {
   const location = useLocation();
   const { contextMode, sidebarCollapsed, toggleSidebar } = useAppStore();
 
-  const visibleItems = navItems.filter((item) => {
-    if (item.contexts.includes('all')) return true;
-    return item.contexts.includes(contextMode as any);
-  });
+  const visibleItems = navItems.filter((item) =>
+    item.contexts.includes(contextMode as any)
+  );
 
   return (
     <aside
