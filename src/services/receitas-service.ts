@@ -10,6 +10,7 @@ import {
   getDocs,
   Timestamp,
 } from 'firebase/firestore';
+
 import { db } from '../lib/firebase-config';
 
 export type CategoriaReceita =
@@ -53,6 +54,12 @@ export async function criarReceita(receita: Omit<Receita, 'id' | 'criadoEm'>): P
     criadoEm: Timestamp.now(),
   });
   return ref.id;
+}
+
+export async function atualizarReceita(id: string, receita: Partial<Receita>): Promise<void> {
+  const data: any = { ...receita };
+  if (receita.data) data.data = Timestamp.fromDate(new Date(receita.data));
+  await updateDoc(doc(db, COLLECTION_NAME, id), data);
 }
 
 export async function deletarReceita(id: string): Promise<void> {

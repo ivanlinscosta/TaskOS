@@ -9,6 +9,7 @@ import {
   Eye,
   Loader,
   MapPin,
+  Pencil,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -227,6 +228,14 @@ export function Viagens() {
                       onClick={() => navigate(`/pessoal/viagens/${viagem.id}`)}
                     >
                       <Eye className="h-3.5 w-3.5" /> Ver detalhes
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      title="Editar viagem"
+                      onClick={() => navigate(`/pessoal/viagens/editar/${viagem.id}`)}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
                     </Button>
                     <Button
                       variant="outline"

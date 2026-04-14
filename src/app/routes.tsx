@@ -34,6 +34,7 @@ import { EditarAula } from "./pages/fiap/editar-aula";
 import { PessoalIndex } from "./pages/pessoal/index";
 import { Viagens } from "./pages/pessoal/viagens";
 import { NovaViagem } from "./pages/pessoal/nova-viagem";
+import { EditarViagem } from "./pages/pessoal/editar-viagem";
 import { DetalheViagem } from "./pages/pessoal/detalhe-viagem";
 import { Custos } from "./pages/pessoal/custos";
 import { NovoCusto } from "./pages/pessoal/novo-custo";
@@ -81,6 +82,7 @@ export const router = createBrowserRouter([
       { path: "pessoal", Component: PessoalIndex },
       { path: "pessoal/viagens", Component: Viagens },
       { path: "pessoal/viagens/nova", Component: NovaViagem },
+      { path: "pessoal/viagens/editar/:id", Component: EditarViagem },
       { path: "pessoal/viagens/:id", Component: DetalheViagem },
       { path: "pessoal/custos", Component: Custos },
       { path: "pessoal/custos/novo", Component: NovoCusto },

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Plus, Wallet, TrendingDown, TrendingUp, Trash2, Loader,
-  ArrowUpCircle, ArrowDownCircle, BarChart3, Plane, X,
+  ArrowUpCircle, ArrowDownCircle, BarChart3, Plane, X, Pencil,
 } from 'lucide-react';
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
@@ -90,10 +90,10 @@ export function Custos() {
   const [viagens,   setViagens]   = useState<viagensService.Viagem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // UI
-  const [aba,              setAba]              = useState<'visao'|'despesas'|'receitas'>('visao');
-  const [dialogDespesa,    setDialogDespesa]    = useState(false);
-  const [dialogReceita,    setDialogReceita]    = useState(false);
+  // UI — criação
+  const [aba,           setAba]           = useState<'visao'|'despesas'|'receitas'>('visao');
+  const [dialogDespesa, setDialogDespesa] = useState(false);
+  const [dialogReceita, setDialogReceita] = useState(false);
   const [formDespesa, setFormDespesa] = useState({
     descricao: '', valor: '', categoria: 'outros' as custosService.CategoriaCusto,
     tipo: 'variavel' as 'fixa'|'variavel', data: new Date().toISOString().split('T')[0], notas: '',
@@ -101,6 +101,18 @@ export function Custos() {
   const [formReceita, setFormReceita] = useState({
     descricao: '', valor: '', categoria: 'salario' as receitasService.CategoriaReceita,
     data: new Date().toISOString().split('T')[0], recorrente: false, notas: '',
+  });
+
+  // UI — edição
+  const [editandoCusto,    setEditandoCusto]    = useState<custosService.Custo | null>(null);
+  const [editandoReceita,  setEditandoReceita]  = useState<receitasService.Receita | null>(null);
+  const [formEditDespesa,  setFormEditDespesa]  = useState({
+    descricao: '', valor: '', categoria: 'outros' as custosService.CategoriaCusto,
+    tipo: 'variavel' as 'fixa'|'variavel', data: '', notas: '',
+  });
+  const [formEditReceita,  setFormEditReceita]  = useState({
+    descricao: '', valor: '', categoria: 'salario' as receitasService.CategoriaReceita,
+    data: '', recorrente: false, notas: '',
   });
 
   useEffect(() => {
@@ -209,6 +221,78 @@ export function Custos() {
     await receitasService.deletarReceita(id);
     setReceitas(p => p.filter(r => r.id !== id));
     toast.success('Excluído!');
+  };
+
+  const abrirEditCusto = (custo: custosService.Custo) => {
+    setEditandoCusto(custo);
+    setFormEditDespesa({
+      descricao: custo.descricao,
+      valor: custo.valor.toString(),
+      categoria: custo.categoria,
+      tipo: custo.tipo,
+      data: new Date(custo.data).toISOString().split('T')[0],
+      notas: custo.notas || '',
+    });
+  };
+
+  const handleUpdateCusto = async () => {
+    if (!editandoCusto?.id) return;
+    if (!formEditDespesa.descricao || !formEditDespesa.valor) {
+      toast.error('Preencha descrição e valor');
+      return;
+    }
+    try {
+      const updated: Partial<custosService.Custo> = {
+        descricao: formEditDespesa.descricao,
+        valor: parseFloat(formEditDespesa.valor),
+        categoria: formEditDespesa.categoria,
+        tipo: formEditDespesa.tipo,
+        data: new Date(formEditDespesa.data),
+        notas: formEditDespesa.notas,
+      };
+      await custosService.atualizarCusto(editandoCusto.id, updated);
+      setCustos(p =>
+        p.map(c => c.id === editandoCusto.id ? { ...c, ...updated } as custosService.Custo : c)
+      );
+      setEditandoCusto(null);
+      toast.success('Gasto atualizado!');
+    } catch { toast.error('Erro ao atualizar'); }
+  };
+
+  const abrirEditReceita = (r: receitasService.Receita) => {
+    setEditandoReceita(r);
+    setFormEditReceita({
+      descricao: r.descricao,
+      valor: r.valor.toString(),
+      categoria: r.categoria,
+      data: new Date(r.data).toISOString().split('T')[0],
+      recorrente: r.recorrente,
+      notas: r.notas || '',
+    });
+  };
+
+  const handleUpdateReceita = async () => {
+    if (!editandoReceita?.id) return;
+    if (!formEditReceita.descricao || !formEditReceita.valor) {
+      toast.error('Preencha descrição e valor');
+      return;
+    }
+    try {
+      const updated: Partial<receitasService.Receita> = {
+        descricao: formEditReceita.descricao,
+        valor: parseFloat(formEditReceita.valor),
+        categoria: formEditReceita.categoria,
+        data: new Date(formEditReceita.data),
+        recorrente: formEditReceita.recorrente,
+        notas: formEditReceita.notas,
+      };
+      await receitasService.atualizarReceita(editandoReceita.id, updated);
+      setReceitas(p =>
+        p.map(r => r.id === editandoReceita.id ? { ...r, ...updated } as receitasService.Receita : r)
+      );
+      setEditandoReceita(null);
+      toast.success('Receita atualizada!');
+    } catch { toast.error('Erro ao atualizar'); }
   };
 
   if (isLoading) return (
@@ -453,7 +537,10 @@ export function Custos() {
                     <span className="text-lg font-bold text-red-500">
                       - R$ {custo.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </span>
-                    <button onClick={() => handleDeleteCusto(custo.id!)} className="text-[var(--theme-muted-foreground)] hover:text-red-500">
+                    <button onClick={() => abrirEditCusto(custo)} className="text-[var(--theme-muted-foreground)] hover:text-[var(--theme-accent)]" title="Editar">
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button onClick={() => handleDeleteCusto(custo.id!)} className="text-[var(--theme-muted-foreground)] hover:text-red-500" title="Excluir">
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
@@ -502,7 +589,10 @@ export function Custos() {
                     <span className="text-lg font-bold text-green-600">
                       + R$ {r.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </span>
-                    <button onClick={() => handleDeleteReceita(r.id!)} className="text-[var(--theme-muted-foreground)] hover:text-red-500">
+                    <button onClick={() => abrirEditReceita(r)} className="text-[var(--theme-muted-foreground)] hover:text-[var(--theme-accent)]" title="Editar">
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button onClick={() => handleDeleteReceita(r.id!)} className="text-[var(--theme-muted-foreground)] hover:text-red-500" title="Excluir">
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
@@ -600,6 +690,97 @@ export function Custos() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogReceita(false)}>Cancelar</Button>
             <Button onClick={handleSaveReceita} style={{ background: '#059669', color: '#fff' }}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Editar Despesa ────────────────────────────────────────────── */}
+      <Dialog open={!!editandoCusto} onOpenChange={(o) => !o && setEditandoCusto(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar Despesa</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <div><Label>Descrição *</Label>
+              <Input placeholder="Ex: Conta de luz" value={formEditDespesa.descricao}
+                onChange={e => setFormEditDespesa(f => ({ ...f, descricao: e.target.value }))} className="mt-1" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Valor (R$) *</Label>
+                <Input type="number" step="0.01" min="0" placeholder="0,00" value={formEditDespesa.valor}
+                  onChange={e => setFormEditDespesa(f => ({ ...f, valor: e.target.value }))} className="mt-1" />
+              </div>
+              <div><Label>Data *</Label>
+                <Input type="date" value={formEditDespesa.data}
+                  onChange={e => setFormEditDespesa(f => ({ ...f, data: e.target.value }))} className="mt-1" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Categoria</Label>
+                <Select value={formEditDespesa.categoria} onValueChange={v => setFormEditDespesa(f => ({ ...f, categoria: v as any }))}>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(custosService.CATEGORIAS_LABELS).map(([k, l]) => <SelectItem key={k} value={k}>{l}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div><Label>Tipo</Label>
+                <Select value={formEditDespesa.tipo} onValueChange={v => setFormEditDespesa(f => ({ ...f, tipo: v as any }))}>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="fixa">Fixo</SelectItem>
+                    <SelectItem value="variavel">Variável</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditandoCusto(null)}>Cancelar</Button>
+            <Button onClick={handleUpdateCusto} style={{ background: '#EF4444', color: '#fff' }}>Salvar Alterações</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Editar Receita ────────────────────────────────────────────── */}
+      <Dialog open={!!editandoReceita} onOpenChange={(o) => !o && setEditandoReceita(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar Receita</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <div><Label>Descrição *</Label>
+              <Input placeholder="Ex: Salário março" value={formEditReceita.descricao}
+                onChange={e => setFormEditReceita(f => ({ ...f, descricao: e.target.value }))} className="mt-1" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Valor (R$) *</Label>
+                <Input type="number" step="0.01" min="0" placeholder="0,00" value={formEditReceita.valor}
+                  onChange={e => setFormEditReceita(f => ({ ...f, valor: e.target.value }))} className="mt-1" />
+              </div>
+              <div><Label>Data *</Label>
+                <Input type="date" value={formEditReceita.data}
+                  onChange={e => setFormEditReceita(f => ({ ...f, data: e.target.value }))} className="mt-1" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Categoria</Label>
+                <Select value={formEditReceita.categoria} onValueChange={v => setFormEditReceita(f => ({ ...f, categoria: v as any }))}>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(receitasService.CATEGORIAS_RECEITA_LABELS).map(([k, l]) => <SelectItem key={k} value={k}>{l}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-end pb-1">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={formEditReceita.recorrente}
+                    onChange={e => setFormEditReceita(f => ({ ...f, recorrente: e.target.checked }))}
+                    className="h-4 w-4 rounded" />
+                  <span className="text-sm text-[var(--theme-foreground)]">Recorrente</span>
+                </label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditandoReceita(null)}>Cancelar</Button>
+            <Button onClick={handleUpdateReceita} style={{ background: '#059669', color: '#fff' }}>Salvar Alterações</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
