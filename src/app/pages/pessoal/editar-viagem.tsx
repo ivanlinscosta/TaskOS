@@ -103,7 +103,7 @@ export function EditarViagem() {
 
         setAtividades(
           (viagem.atividades || []).map((a) => ({
-            id: a.id,
+            id: a.id || crypto.randomUUID(), // garante id mesmo em dados antigos sem id
             nome: a.nome,
             data: a.data || '',
             horario: a.horario || '',
@@ -163,23 +163,28 @@ export function EditarViagem() {
 
     setIsSaving(true);
     try {
+      // Firestore não aceita `undefined` em arrays/objetos aninhados — omitir campos ausentes
       const orcamentoDetalhado: viagensService.ItemOrcamento[] = itensOrcamento
         .filter((i) => parseFloat(i.valor) > 0)
-        .map((i) => ({
-          categoria: i.categoria,
-          valor: parseFloat(i.valor),
-          formaPagamento: i.formaPagamento,
-          parcelas: i.formaPagamento === 'a_prazo' ? parseInt(i.parcelas) || 1 : undefined,
-          dataPrimeiraParcela:
-            i.formaPagamento === 'a_prazo' ? i.dataPrimeiraParcela : undefined,
-        }));
+        .map((i) => {
+          const item: viagensService.ItemOrcamento = {
+            categoria: i.categoria,
+            valor: parseFloat(i.valor),
+            formaPagamento: i.formaPagamento,
+          };
+          if (i.formaPagamento === 'a_prazo') {
+            item.parcelas = parseInt(i.parcelas) || 1;
+            if (i.dataPrimeiraParcela) item.dataPrimeiraParcela = i.dataPrimeiraParcela;
+          }
+          return item;
+        });
 
-      const atividadesFinal: viagensService.Atividade[] = atividades.map((a) => ({
-        id: a.id,
-        nome: a.nome,
-        data: a.data || undefined,
-        horario: a.horario || undefined,
-      }));
+      const atividadesFinal: viagensService.Atividade[] = atividades.map((a) => {
+        const ativ: viagensService.Atividade = { id: a.id, nome: a.nome };
+        if (a.data) ativ.data = a.data;
+        if (a.horario) ativ.horario = a.horario;
+        return ativ;
+      });
 
       await viagensService.atualizarViagem(id!, {
         destino: form.destino,
