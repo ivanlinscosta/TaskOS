@@ -23,12 +23,14 @@ export type CategoriaCusto =
   | 'vestuario'
   | 'outros';
 
+export type TipoCusto = 'fixa' | 'assinatura' | 'variavel';
+
 export interface Custo {
   id?: string;
   descricao: string;
   valor: number;
   categoria: CategoriaCusto;
-  tipo: 'fixa' | 'variavel';
+  tipo: TipoCusto;
   data: Date;
   viagemId?: string;
   comprovante?: string;
@@ -88,6 +90,12 @@ export async function listarCustosPorViagem(viagemId: string): Promise<Custo[]> 
   const todos = await listarCustos();
   return todos.filter((c) => c.viagemId === viagemId);
 }
+
+export const TIPOS_CUSTO_LABELS: Record<TipoCusto, string> = {
+  fixa: 'Fixo',
+  assinatura: 'Assinatura',
+  variavel: 'Variável',
+};
 
 export const CATEGORIAS_LABELS: Record<CategoriaCusto, string> = {
   alimentacao: 'Alimentação',

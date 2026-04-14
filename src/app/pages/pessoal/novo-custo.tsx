@@ -20,7 +20,7 @@ export function NovoCusto() {
     descricao: '',
     valor: '',
     categoria: 'outros' as custosService.CategoriaCusto,
-    tipo: 'variavel' as 'fixa' | 'variavel',
+    tipo: 'variavel' as custosService.TipoCusto,
     data: new Date().toISOString().split('T')[0],
     viagemId: '',
     notas: '',
@@ -141,6 +141,7 @@ export function NovoCusto() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="fixa">Fixo</SelectItem>
+                        <SelectItem value="assinatura">Assinatura</SelectItem>
                         <SelectItem value="variavel">Variável</SelectItem>
                       </SelectContent>
                     </Select>

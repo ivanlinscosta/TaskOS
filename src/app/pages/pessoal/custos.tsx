@@ -55,6 +55,33 @@ function valorPorMes(
   return arr;
 }
 
+// Custos fixos e assinaturas se repetem a partir do mês de início; variáveis só no mês exato
+function distribuirCustosPorMes(
+  custos: custosService.Custo[],
+  ano = ANO_ATUAL
+): { fixos: number[]; assinaturas: number[]; variaveis: number[] } {
+  const fixos = Array(12).fill(0);
+  const assinaturas = Array(12).fill(0);
+  const variaveis = Array(12).fill(0);
+
+  custos.forEach(({ data, valor, tipo }) => {
+    const d = new Date(data);
+    const anoC = getYear(d);
+    const mesC = getMonth(d);
+
+    if (tipo === 'fixa' || tipo === 'assinatura') {
+      if (anoC > ano) return;
+      const startMes = anoC < ano ? 0 : mesC;
+      const arr = tipo === 'fixa' ? fixos : assinaturas;
+      for (let m = startMes; m < 12; m++) arr[m] += valor;
+    } else {
+      if (anoC === ano) variaveis[mesC] += valor;
+    }
+  });
+
+  return { fixos, assinaturas, variaveis };
+}
+
 function viagemCustosPorMes(viagens: viagensService.Viagem[], ano = ANO_ATUAL): number[] {
   const arr = Array(12).fill(0);
   viagens.forEach((v) => {
@@ -96,7 +123,7 @@ export function Custos() {
   const [dialogReceita, setDialogReceita] = useState(false);
   const [formDespesa, setFormDespesa] = useState({
     descricao: '', valor: '', categoria: 'outros' as custosService.CategoriaCusto,
-    tipo: 'variavel' as 'fixa'|'variavel', data: new Date().toISOString().split('T')[0], notas: '',
+    tipo: 'variavel' as custosService.TipoCusto, data: new Date().toISOString().split('T')[0], notas: '',
   });
   const [formReceita, setFormReceita] = useState({
     descricao: '', valor: '', categoria: 'salario' as receitasService.CategoriaReceita,
@@ -108,7 +135,7 @@ export function Custos() {
   const [editandoReceita,  setEditandoReceita]  = useState<receitasService.Receita | null>(null);
   const [formEditDespesa,  setFormEditDespesa]  = useState({
     descricao: '', valor: '', categoria: 'outros' as custosService.CategoriaCusto,
-    tipo: 'variavel' as 'fixa'|'variavel', data: '', notas: '',
+    tipo: 'variavel' as custosService.TipoCusto, data: '', notas: '',
   });
   const [formEditReceita,  setFormEditReceita]  = useState({
     descricao: '', valor: '', categoria: 'salario' as receitasService.CategoriaReceita,
@@ -132,14 +159,23 @@ export function Custos() {
   }, []);
 
   // ── Cálculos ─────────────────────────────────────────────────────────────────
-  const custosMes     = useMemo(() => valorPorMes(custos.map(c => ({ data: c.data, valor: c.valor }))),    [custos]);
-  const receitasMes   = useMemo(() => valorPorMes(receitas.map(r => ({ data: r.data, valor: r.valor }))),  [receitas]);
-  const viagensMes    = useMemo(() => viagemCustosPorMes(viagens), [viagens]);
+  const { fixos: fixosMes, assinaturas: assinaturasMes, variaveis: variaveisMes } = useMemo(
+    () => distribuirCustosPorMes(custos),
+    [custos]
+  );
+  const custosMes        = useMemo(() => fixosMes.map((v, i) => v + assinaturasMes[i] + variaveisMes[i]), [fixosMes, assinaturasMes, variaveisMes]);
+  const receitasMes      = useMemo(() => valorPorMes(receitas.map(r => ({ data: r.data, valor: r.valor }))), [receitas]);
+  const viagensMes       = useMemo(() => viagemCustosPorMes(viagens), [viagens]);
   const despesasTotalMes = useMemo(() => custosMes.map((v, i) => v + viagensMes[i]), [custosMes, viagensMes]);
 
   const totalReceitasAno  = receitasMes.reduce((s, v) => s + v, 0);
   const totalDespesasAno  = despesasTotalMes.reduce((s, v) => s + v, 0);
   const saldoAno          = totalReceitasAno - totalDespesasAno;
+
+  // Totais anuais por tipo (para métricas)
+  const mesAtual         = new Date().getMonth();
+  const totalFixosMensal = fixosMes[mesAtual];
+  const totalAssinaturasMensal = assinaturasMes[mesAtual];
 
   const dadosMensais = MESES.map((mes, i) => ({
     mes,
@@ -343,6 +379,25 @@ export function Custos() {
         ))}
       </div>
 
+      {/* ── Sub-métricas de despesas recorrentes ─────────────────────────── */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: 'Fixos / mês', valor: totalFixosMensal, cor: '#F59E0B', desc: 'Água, luz, internet...' },
+          { label: 'Assinaturas / mês', valor: totalAssinaturasMensal, cor: '#8B5CF6', desc: 'Netflix, Amazon...' },
+          { label: 'Variáveis (mês atual)', valor: variaveisMes[mesAtual], cor: '#EF4444', desc: 'Gastos pontuais' },
+        ].map(({ label, valor, cor, desc }) => (
+          <Card key={label}>
+            <CardContent className="p-4">
+              <p className="text-xs font-medium" style={{ color: cor }}>{label}</p>
+              <p className="text-xl font-bold mt-1 text-[var(--theme-foreground)]">
+                R$ {valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p className="text-xs mt-0.5 text-[var(--theme-muted-foreground)]">{desc}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
       {/* ── Abas ───────────────────────────────────────────────────────────── */}
       <div className="flex gap-1 rounded-xl p-1" style={{ background: 'var(--theme-background-secondary)' }}>
         {(['visao', 'despesas', 'receitas'] as const).map((a) => (
@@ -474,82 +529,147 @@ export function Custos() {
       )}
 
       {/* ── Despesas ─────────────────────────────────────────────────────────── */}
-      {aba === 'despesas' && (
-        <div className="space-y-3">
-          {/* Viagens importadas */}
-          {viagens.filter(v => v.orcamento > 0).map(v => (
-            <Card key={v.id} className="opacity-90">
+      {aba === 'despesas' && (() => {
+        const fixos       = custos.filter(c => c.tipo === 'fixa');
+        const assinaturas = custos.filter(c => c.tipo === 'assinatura');
+        const variaveis   = custos.filter(c => c.tipo === 'variavel');
+        const viaagens    = viagens.filter(v => v.orcamento > 0);
+
+        const CustoRow = ({ custo }: { custo: custosService.Custo }) => {
+          const cor = custosService.CATEGORIAS_CORES[custo.categoria] || '#6B7280';
+          return (
+            <Card className="hover:shadow-md transition-all">
               <CardContent className="p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl" style={{ background: '#6366F115' }}>
-                    <Plane className="h-5 w-5 text-[#6366F1]" />
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl" style={{ background: `${cor}20` }}>
+                    <TrendingDown className="h-5 w-5" style={{ color: cor }} />
                   </div>
                   <div>
-                    <p className="font-medium text-[var(--theme-foreground)]">Viagem: {v.destino}</p>
+                    <p className="font-medium text-[var(--theme-foreground)]">{custo.descricao}</p>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <Badge variant="outline" className="text-xs py-0" style={{ borderColor: '#6366F1', color: '#6366F1' }}>Viagem</Badge>
+                      <Badge variant="outline" className="text-xs py-0" style={{ borderColor: cor, color: cor }}>
+                        {custosService.CATEGORIAS_LABELS[custo.categoria]}
+                      </Badge>
                       <span className="text-xs text-[var(--theme-muted-foreground)]">
-                        {format(new Date(v.dataIda), "d 'de' MMM 'de' yyyy", { locale: ptBR })}
+                        desde {format(new Date(custo.data), "MMM 'de' yyyy", { locale: ptBR })}
                       </span>
                     </div>
                   </div>
                 </div>
-                <span className="text-lg font-bold text-[#6366F1]">
-                  R$ {v.orcamento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-lg font-bold text-red-500">
+                    R$ {custo.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                  <button onClick={() => abrirEditCusto(custo)} className="text-[var(--theme-muted-foreground)] hover:text-[var(--theme-accent)]" title="Editar">
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button onClick={() => handleDeleteCusto(custo.id!)} className="text-[var(--theme-muted-foreground)] hover:text-red-500" title="Excluir">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </CardContent>
             </Card>
-          ))}
+          );
+        };
 
-          {/* Gastos comuns */}
-          {custos.length === 0 && viagens.length === 0 && (
-            <div className="text-center py-12">
-              <Wallet className="h-12 w-12 mx-auto text-[var(--theme-muted-foreground)] mb-3" />
-              <p className="text-[var(--theme-muted-foreground)]">Nenhum gasto registrado</p>
-              <Button className="mt-4 gap-2" style={{ background: 'var(--theme-accent)', color: '#fff' }} onClick={() => setDialogDespesa(true)}>
-                <Plus className="h-4 w-4" /> Registrar Gasto
-              </Button>
+        if (custos.length === 0 && viaagens.length === 0) return (
+          <div className="text-center py-12">
+            <Wallet className="h-12 w-12 mx-auto text-[var(--theme-muted-foreground)] mb-3" />
+            <p className="text-[var(--theme-muted-foreground)]">Nenhum gasto registrado</p>
+            <Button className="mt-4 gap-2" style={{ background: 'var(--theme-accent)', color: '#fff' }} onClick={() => setDialogDespesa(true)}>
+              <Plus className="h-4 w-4" /> Registrar Gasto
+            </Button>
+          </div>
+        );
+
+        return (
+          <div className="space-y-6">
+
+            {/* Custos Fixos */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold flex items-center gap-2" style={{ color: '#F59E0B' }}>
+                  <span className="inline-block h-2 w-2 rounded-full bg-[#F59E0B]" />
+                  Custos Fixos
+                  <span className="text-xs font-normal text-[var(--theme-muted-foreground)]">· repete todo mês</span>
+                </h3>
+                {fixos.length > 0 && (
+                  <span className="text-sm font-medium text-[var(--theme-muted-foreground)]">
+                    R$ {fixos.reduce((s, c) => s + c.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês
+                  </span>
+                )}
+              </div>
+              {fixos.length === 0 ? (
+                <p className="text-sm text-[var(--theme-muted-foreground)] pl-4">Nenhum custo fixo cadastrado</p>
+              ) : (
+                <div className="space-y-2">{fixos.map(c => <CustoRow key={c.id} custo={c} />)}</div>
+              )}
             </div>
-          )}
-          {custos.map(custo => {
-            const cor = custosService.CATEGORIAS_CORES[custo.categoria] || '#6B7280';
-            return (
-              <Card key={custo.id} className="hover:shadow-md transition-all">
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl" style={{ background: `${cor}20` }}>
-                      <TrendingDown className="h-5 w-5" style={{ color: cor }} />
-                    </div>
-                    <div>
-                      <p className="font-medium text-[var(--theme-foreground)]">{custo.descricao}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <Badge variant="outline" className="text-xs py-0" style={{ borderColor: cor, color: cor }}>
-                          {custosService.CATEGORIAS_LABELS[custo.categoria]}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs py-0">{custo.tipo === 'fixa' ? 'Fixo' : 'Variável'}</Badge>
-                        <span className="text-xs text-[var(--theme-muted-foreground)]">
-                          {format(new Date(custo.data), "d 'de' MMM 'de' yyyy", { locale: ptBR })}
-                        </span>
+
+            {/* Assinaturas */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold flex items-center gap-2" style={{ color: '#8B5CF6' }}>
+                  <span className="inline-block h-2 w-2 rounded-full bg-[#8B5CF6]" />
+                  Assinaturas
+                  <span className="text-xs font-normal text-[var(--theme-muted-foreground)]">· repete todo mês</span>
+                </h3>
+                {assinaturas.length > 0 && (
+                  <span className="text-sm font-medium text-[var(--theme-muted-foreground)]">
+                    R$ {assinaturas.reduce((s, c) => s + c.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês
+                  </span>
+                )}
+              </div>
+              {assinaturas.length === 0 ? (
+                <p className="text-sm text-[var(--theme-muted-foreground)] pl-4">Nenhuma assinatura cadastrada</p>
+              ) : (
+                <div className="space-y-2">{assinaturas.map(c => <CustoRow key={c.id} custo={c} />)}</div>
+              )}
+            </div>
+
+            {/* Variáveis */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold flex items-center gap-2" style={{ color: '#EF4444' }}>
+                  <span className="inline-block h-2 w-2 rounded-full bg-[#EF4444]" />
+                  Variáveis
+                  <span className="text-xs font-normal text-[var(--theme-muted-foreground)]">· por lançamento</span>
+                </h3>
+              </div>
+              {/* Viagens importadas */}
+              {viaagens.map(v => (
+                <Card key={v.id} className="opacity-90 mb-2">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl" style={{ background: '#6366F115' }}>
+                        <Plane className="h-5 w-5 text-[#6366F1]" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-[var(--theme-foreground)]">Viagem: {v.destino}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <Badge variant="outline" className="text-xs py-0" style={{ borderColor: '#6366F1', color: '#6366F1' }}>Viagem</Badge>
+                          <span className="text-xs text-[var(--theme-muted-foreground)]">
+                            {format(new Date(v.dataIda), "d 'de' MMM 'de' yyyy", { locale: ptBR })}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg font-bold text-red-500">
-                      - R$ {custo.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    <span className="text-lg font-bold text-[#6366F1]">
+                      R$ {v.orcamento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </span>
-                    <button onClick={() => abrirEditCusto(custo)} className="text-[var(--theme-muted-foreground)] hover:text-[var(--theme-accent)]" title="Editar">
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <button onClick={() => handleDeleteCusto(custo.id!)} className="text-[var(--theme-muted-foreground)] hover:text-red-500" title="Excluir">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+                  </CardContent>
+                </Card>
+              ))}
+              {variaveis.length === 0 && viaagens.length === 0 ? (
+                <p className="text-sm text-[var(--theme-muted-foreground)] pl-4">Nenhum gasto variável registrado</p>
+              ) : (
+                <div className="space-y-2">{variaveis.map(c => <CustoRow key={c.id} custo={c} />)}</div>
+              )}
+            </div>
+
+          </div>
+        );
+      })()}
 
       {/* ── Receitas ─────────────────────────────────────────────────────────── */}
       {aba === 'receitas' && (
@@ -636,6 +756,7 @@ export function Custos() {
                   <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="fixa">Fixo</SelectItem>
+                    <SelectItem value="assinatura">Assinatura</SelectItem>
                     <SelectItem value="variavel">Variável</SelectItem>
                   </SelectContent>
                 </Select>
@@ -727,6 +848,7 @@ export function Custos() {
                   <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="fixa">Fixo</SelectItem>
+                    <SelectItem value="assinatura">Assinatura</SelectItem>
                     <SelectItem value="variavel">Variável</SelectItem>
                   </SelectContent>
                 </Select>
