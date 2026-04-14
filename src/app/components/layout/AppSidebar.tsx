@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '../../../stores/useAppStore';
 import { cn } from '../../../lib/utils';
+import { TaskOSRadarIcon } from '../TaskOSRadarIcon';
 
 interface NavItem {
   label: string;
@@ -84,17 +85,8 @@ export default function AppSidebar() {
         style={{ borderBottom: '1px solid var(--theme-border)' }}
       >
         {!sidebarCollapsed && (
-          <div className="flex items-center gap-2">
-            <div
-              className="flex h-9 w-9 items-center justify-center rounded-xl font-bold shadow-sm"
-              style={{
-                background: 'var(--theme-accent)',
-                color: 'var(--theme-accent-foreground)',
-              }}
-            >
-              T
-            </div>
-
+          <div className="flex items-center gap-2.5">
+            <TaskOSRadarIcon size={36} />
             <div className="leading-tight">
               <span
                 className="block text-xl font-bold"
@@ -114,8 +106,9 @@ export default function AppSidebar() {
 
         <button
           onClick={toggleSidebar}
-          className="rounded-lg p-1.5 transition-colors"
+          className={cn('rounded-lg p-1.5 transition-colors', sidebarCollapsed && 'mx-auto')}
           style={{ color: 'var(--theme-foreground)' }}
+          title={sidebarCollapsed ? 'Expandir' : 'Recolher'}
         >
           {sidebarCollapsed ? (
             <ChevronRight className="h-4 w-4" />
@@ -124,6 +117,13 @@ export default function AppSidebar() {
           )}
         </button>
       </div>
+
+      {/* Collapsed: mini icon centred at top of nav */}
+      {sidebarCollapsed && (
+        <div className="flex justify-center py-3" style={{ borderBottom: '1px solid var(--theme-border)' }}>
+          <TaskOSRadarIcon size={30} />
+        </div>
+      )}
 
       <nav className="flex-1 overflow-y-auto p-3">
         <div className="space-y-1">
