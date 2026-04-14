@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Mail, Lock, LogIn, UserPlus, Chrome, Eye, EyeOff } from 'lucide-react';
+import taskOsIconSrc from '../../assets/task-os-icon.png';
 import { useAuth } from '../../lib/auth-context';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -158,9 +159,12 @@ export function Login() {
       
       <Card className="w-full max-w-md relative z-10 shadow-2xl border-[var(--theme-border)]">
         <CardHeader className="text-center space-y-2">
-          <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-[#6A0DAD] to-[#EC7000] flex items-center justify-center mb-4">
-            <span className="text-3xl font-bold text-white">D</span>
-          </div>
+          <img
+            src={taskOsIconSrc}
+            alt="TaskOS"
+            className="mx-auto mb-4"
+            style={{ width: 72, height: 72, borderRadius: '50%' }}
+          />
           <CardTitle className="text-3xl font-bold text-[var(--theme-foreground)]">
             DualOS
           </CardTitle>
