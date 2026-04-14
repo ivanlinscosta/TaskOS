@@ -1,10 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.assistantImageFlowCallable = exports.assistantFlowCallable = void 0;
+exports.whatsappWebhook = exports.assistantImageFlowCallable = exports.assistantFlowCallable = void 0;
 const https_1 = require("firebase-functions/https");
 const params_1 = require("firebase-functions/params");
 const assistant_flow_1 = require("./flows/assistant-flow");
 const assistant_image_flow_1 = require("./flows/assistant-image-flow");
+const whatsapp_webhook_1 = require("./whatsapp-webhook");
+Object.defineProperty(exports, "whatsappWebhook", { enumerable: true, get: function () { return whatsapp_webhook_1.whatsappWebhook; } });
 const geminiApiKey = (0, params_1.defineSecret)('GEMINI_API_KEY');
 exports.assistantFlowCallable = (0, https_1.onCallGenkit)({
     secrets: [geminiApiKey],

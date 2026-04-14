@@ -1,0 +1,13 @@
+[debug] [2026-04-13T23:46:48.569Z] ----------------------------------------------------------------------
+[debug] [2026-04-13T23:46:48.570Z] Command:       /opt/homebrew/Cellar/node/25.8.2/bin/node /opt/homebrew/bin/firebase use taskos-a2080
+[debug] [2026-04-13T23:46:48.570Z] CLI Version:   15.14.0
+[debug] [2026-04-13T23:46:48.570Z] Platform:      darwin
+[debug] [2026-04-13T23:46:48.570Z] Node Version:  v25.8.2
+[debug] [2026-04-13T23:46:48.570Z] Time:          Mon Apr 13 2026 20:46:48 GMT-0300 (Brasilia Standard Time)
+[debug] [2026-04-13T23:46:48.570Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-04-13T23:46:48.660Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-04-13T23:46:48.660Z] > authorizing via signed-in user (ivanlinsc2@gmail.com)
+[debug] [2026-04-13T23:46:48.660Z] Checked if tokens are valid: true, expires at: 1776125856285
+[debug] [2026-04-13T23:46:48.660Z] Checked if tokens are valid: true, expires at: 1776125856285
+[debug] [2026-04-13T23:46:48.661Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/taskos-a2080 [none]

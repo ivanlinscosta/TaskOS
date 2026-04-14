@@ -1,0 +1,117 @@
+[debug] [2026-04-13T23:46:50.399Z] ----------------------------------------------------------------------
+[debug] [2026-04-13T23:46:50.400Z] Command:       /opt/homebrew/Cellar/node/25.8.2/bin/node /opt/homebrew/bin/firebase deploy --only hosting,functions
+[debug] [2026-04-13T23:46:50.400Z] CLI Version:   15.14.0
+[debug] [2026-04-13T23:46:50.400Z] Platform:      darwin
+[debug] [2026-04-13T23:46:50.400Z] Node Version:  v25.8.2
+[debug] [2026-04-13T23:46:50.400Z] Time:          Mon Apr 13 2026 20:46:50 GMT-0300 (Brasilia Standard Time)
+[debug] [2026-04-13T23:46:50.400Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-04-13T23:46:51.235Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-04-13T23:46:51.235Z] > authorizing via signed-in user (ivanlinsc2@gmail.com)
+[debug] [2026-04-13T23:46:51.235Z] [iam] checking project taskos-a2080 for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-04-13T23:46:51.235Z] Checked if tokens are valid: true, expires at: 1776125856285
+[debug] [2026-04-13T23:46:51.235Z] Checked if tokens are valid: true, expires at: 1776125856285
+[debug] [2026-04-13T23:46:51.236Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskos-a2080:testIamPermissions [none]
+[debug] [2026-04-13T23:46:51.236Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskos-a2080:testIamPermissions  x-goog-user-project=taskos-a2080
+[debug] [2026-04-13T23:46:51.236Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskos-a2080:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-04-13T23:46:51.505Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskos-a2080:testIamPermissions 200
+[debug] [2026-04-13T23:46:51.505Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskos-a2080:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-04-13T23:46:51.506Z] Checked if tokens are valid: true, expires at: 1776125856285
+[debug] [2026-04-13T23:46:51.506Z] Checked if tokens are valid: true, expires at: 1776125856285
+[debug] [2026-04-13T23:46:51.506Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/taskos-a2080/serviceAccounts/taskos-a2080@appspot.gserviceaccount.com:testIamPermissions [none]
+[debug] [2026-04-13T23:46:51.506Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/taskos-a2080/serviceAccounts/taskos-a2080@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2026-04-13T23:46:52.461Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/taskos-a2080/serviceAccounts/taskos-a2080@appspot.gserviceaccount.com:testIamPermissions 200
+[debug] [2026-04-13T23:46:52.461Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/taskos-a2080/serviceAccounts/taskos-a2080@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2026-04-13T23:46:52.462Z] Checked if tokens are valid: true, expires at: 1776125856285
+[debug] [2026-04-13T23:46:52.462Z] Checked if tokens are valid: true, expires at: 1776125856285
+[debug] [2026-04-13T23:46:52.463Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/taskos-a2080 [none]
+[debug] [2026-04-13T23:46:52.930Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/taskos-a2080 200
+[debug] [2026-04-13T23:46:52.930Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/taskos-a2080 {"projectId":"taskos-a2080","projectNumber":"221891458549","displayName":"TaskOS","name":"projects/taskos-a2080","resources":{"hostingSite":"taskos-a2080"},"state":"ACTIVE","etag":"1_c300736f-bbe4-4c49-ab88-23e939197740"}
+[info] 
+[info] === Deploying to 'taskos-a2080'...
+[info] 
+[info] i  deploying functions, hosting 
+[info] Running command: npm --prefix "$RESOURCE_DIR" run build
+[info] ✔  functions: Finished running predeploy script. 
+[debug] [2026-04-13T23:46:54.104Z] Checked if tokens are valid: true, expires at: 1776125856285
+[debug] [2026-04-13T23:46:54.104Z] Checked if tokens are valid: true, expires at: 1776125856285
+[debug] [2026-04-13T23:46:54.104Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/taskos-a2080 [none]
+[debug] [2026-04-13T23:46:54.309Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/taskos-a2080 200
+[debug] [2026-04-13T23:46:54.310Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/taskos-a2080 {"projectNumber":"221891458549","projectId":"taskos-a2080","lifecycleState":"ACTIVE","name":"TaskOS","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2026-03-31T18:21:37.034Z"}
+[info] i  functions: preparing codebase default for deployment 
+[info] i  functions: ensuring required API cloudfunctions.googleapis.com is enabled... 
+[info] i  functions: ensuring required API cloudbuild.googleapis.com is enabled... 
+[info] i  artifactregistry: ensuring required API artifactregistry.googleapis.com is enabled... 
+[debug] [2026-04-13T23:46:54.313Z] Checked if tokens are valid: true, expires at: 1776125856285
+[debug] [2026-04-13T23:46:54.313Z] Checked if tokens are valid: true, expires at: 1776125856285
+[debug] [2026-04-13T23:46:54.314Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/taskos-a2080/adminSdkConfig [none]
+[debug] [2026-04-13T23:46:54.778Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/taskos-a2080/adminSdkConfig 200
+[debug] [2026-04-13T23:46:54.779Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/taskos-a2080/adminSdkConfig {"projectId":"taskos-a2080","storageBucket":"taskos-a2080.firebasestorage.app"}
+[debug] [2026-04-13T23:46:54.780Z] Validating nodejs source
+[warn] ⚠  functions: Runtime Node.js 20 will be deprecated on 2026-04-30 and will be decommissioned on 2026-10-30, after which you will not be able to deploy without upgrading. Consider upgrading now to avoid disruption. See https://cloud.google.com/functions/docs/runtime-support for full details on the lifecycle policy 
+[debug] [2026-04-13T23:46:55.126Z] > [functions] package.json contents: {
+  "name": "functions",
+  "private": true,
+  "main": "lib/index.js",
+  "type": "commonjs",
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "serve": "npm run build && firebase emulators:start --only functions",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "dependencies": {
+    "@genkit-ai/google-genai": "^1.32.0",
+    "firebase-admin": "^13.8.0",
+    "firebase-functions": "^7.2.5",
+    "genkit": "^1.32.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
+[debug] [2026-04-13T23:46:55.126Z] Building nodejs source
+[info] i  functions: Loading and analyzing source code for codebase default to determine what to deploy 
+[debug] [2026-04-13T23:46:55.126Z] Could not find functions.yaml. Must use http discovery
+[debug] [2026-04-13T23:46:55.130Z] Found firebase-functions binary at '/Users/ivancosta/Desktop/WORK/TaskOS/functions/node_modules/.bin/firebase-functions'
+[info] Serving at port 8316
+
+[debug] [2026-04-13T23:46:55.450Z] Got response from /__/functions.yaml {"endpoints":{"assistantFlowCallable":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","secretEnvironmentVariables":[{"key":"GEMINI_API_KEY"}],"labels":{},"callableTrigger":{"genkitAction":"assistantFlow"},"entryPoint":"assistantFlowCallable"},"assistantImageFlowCallable":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","secretEnvironmentVariables":[{"key":"GEMINI_API_KEY"}],"labels":{},"callableTrigger":{"genkitAction":"assistantImageFlow"},"entryPoint":"assistantImageFlowCallable"},"whatsappWebhook":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","secretEnvironmentVariables":[{"key":"WHATSAPP_VERIFY_TOKEN"}],"labels":{},"httpsTrigger":{},"entryPoint":"whatsappWebhook"}},"specVersion":"v1alpha1","requiredAPIs":[],"extensions":{},"params":[{"type":"secret","name":"WHATSAPP_VERIFY_TOKEN"},{"type":"secret","name":"GEMINI_API_KEY"}]}
+[info] i  extensions: ensuring required API firebaseextensions.googleapis.com is enabled... 
+[debug] [2026-04-13T23:46:59.474Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-04-13T23:46:59.474Z] > authorizing via signed-in user (ivanlinsc2@gmail.com)
+[debug] [2026-04-13T23:46:59.474Z] [iam] checking project taskos-a2080 for permissions ["firebase.projects.get","firebaseextensions.instances.list"]
+[debug] [2026-04-13T23:46:59.474Z] Checked if tokens are valid: true, expires at: 1776125856285
+[debug] [2026-04-13T23:46:59.474Z] Checked if tokens are valid: true, expires at: 1776125856285
+[debug] [2026-04-13T23:46:59.475Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskos-a2080:testIamPermissions [none]
+[debug] [2026-04-13T23:46:59.475Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskos-a2080:testIamPermissions  x-goog-user-project=taskos-a2080
+[debug] [2026-04-13T23:46:59.475Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskos-a2080:testIamPermissions {"permissions":["firebase.projects.get","firebaseextensions.instances.list"]}
+[debug] [2026-04-13T23:47:00.299Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskos-a2080:testIamPermissions 200
+[debug] [2026-04-13T23:47:00.299Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/taskos-a2080:testIamPermissions {"permissions":["firebase.projects.get","firebaseextensions.instances.list"]}
+[debug] [2026-04-13T23:47:00.300Z] Checked if tokens are valid: true, expires at: 1776125856285
+[debug] [2026-04-13T23:47:00.300Z] Checked if tokens are valid: true, expires at: 1776125856285
+[debug] [2026-04-13T23:47:00.301Z] >>> [apiv2][query] GET https://firebaseextensions.googleapis.com/v1beta/projects/taskos-a2080/instances pageSize=100&pageToken=
+[debug] [2026-04-13T23:47:01.458Z] <<< [apiv2][status] GET https://firebaseextensions.googleapis.com/v1beta/projects/taskos-a2080/instances 200
+[debug] [2026-04-13T23:47:01.458Z] <<< [apiv2][body] GET https://firebaseextensions.googleapis.com/v1beta/projects/taskos-a2080/instances {}
+[debug] [2026-04-13T23:47:01.460Z] Checked if tokens are valid: true, expires at: 1776125856285
+[debug] [2026-04-13T23:47:01.460Z] Checked if tokens are valid: true, expires at: 1776125856285
+[debug] [2026-04-13T23:47:01.460Z] >>> [apiv2][query] GET https://secretmanager.googleapis.com/v1/projects/taskos-a2080/secrets/WHATSAPP_VERIFY_TOKEN [none]
+[debug] [2026-04-13T23:47:02.034Z] <<< [apiv2][status] GET https://secretmanager.googleapis.com/v1/projects/taskos-a2080/secrets/WHATSAPP_VERIFY_TOKEN 404
+[debug] [2026-04-13T23:47:02.034Z] <<< [apiv2][body] GET https://secretmanager.googleapis.com/v1/projects/taskos-a2080/secrets/WHATSAPP_VERIFY_TOKEN {"error":{"code":404,"message":"Secret [projects/221891458549/secrets/WHATSAPP_VERIFY_TOKEN] not found.","status":"NOT_FOUND"}}
+[debug] [2026-04-14T09:50:35.126Z] ExitPromptError: User force closed the prompt with SIGINT
+    at Interface.sigint (/opt/homebrew/lib/node_modules/firebase-tools/node_modules/@inquirer/core/dist/commonjs/lib/create-prompt.js:101:37)
+    at Interface.emit (node:events:508:20)
+    at [_ttyWrite] [as _ttyWrite] (node:internal/readline/interface:1327:18)
+    at ReadStream.onkeypress (node:internal/readline/interface:284:20)
+    at ReadStream.emit (node:events:520:22)
+    at emitKeys (node:internal/readline/utils:371:14)
+    at emitKeys.next (<anonymous>)
+    at ReadStream.onData (node:internal/readline/emitKeypressEvents:64:36)
+    at ReadStream.emit (node:events:508:20)
+    at addChunk (node:internal/streams/readable:564:12)
+[error] 
+[error] Error: An unexpected error has occurred.
