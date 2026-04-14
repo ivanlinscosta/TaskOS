@@ -194,12 +194,27 @@ export function DetalheViagem() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {viagem.atividades.map((a, i) => (
-                    <div key={i} className="flex items-center gap-3">
-                      <Circle className="h-4 w-4 flex-shrink-0 text-[var(--theme-accent)]" />
-                      <span className="text-sm text-[var(--theme-foreground)]">{a}</span>
-                    </div>
-                  ))}
+                  {viagem.atividades.map((a, i) => {
+                    const nome  = typeof a === 'string' ? a : a.nome;
+                    const hora  = typeof a === 'string' ? null : a.horario;
+                    const data  = typeof a === 'string' ? null : a.data;
+                    const key   = typeof a === 'string' ? i : (a.id ?? i);
+                    return (
+                      <div key={key} className="flex items-start gap-3">
+                        <Circle className="h-4 w-4 flex-shrink-0 mt-0.5 text-[var(--theme-accent)]" />
+                        <div>
+                          <span className="text-sm text-[var(--theme-foreground)]">{nome}</span>
+                          {(data || hora) && (
+                            <p className="text-xs text-[var(--theme-muted-foreground)] mt-0.5">
+                              {data && format(new Date(data), "d 'de' MMM", { locale: ptBR })}
+                              {data && hora && ' · '}
+                              {hora}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
