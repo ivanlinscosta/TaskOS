@@ -39,8 +39,8 @@ import { DetalheViagem } from "./pages/pessoal/detalhe-viagem";
 import { Custos } from "./pages/pessoal/custos";
 import { NovoCusto } from "./pages/pessoal/novo-custo";
 import { TarefasPessoais } from "./pages/pessoal/tarefas";
-// WhatsApp
-import { WhatsAppIntegracao } from "./pages/whatsapp";
+// Chat Guiado
+import { ChatGuiado } from "./pages/chat";
 
 
 export const router = createBrowserRouter([
@@ -89,8 +89,8 @@ export const router = createBrowserRouter([
       { path: "pessoal/tarefas", Component: TarefasPessoais },
 
       // Shared
-      { path: "ai", Component: AIAssistant },
-      { path: "whatsapp", Component: WhatsAppIntegracao },
+      { path: "ai",   Component: AIAssistant },
+      { path: "chat", Component: ChatGuiado  },
 
       // Admin
       { path: "admin/usuarios-lote", Component: UsuariosLote },

@@ -14,8 +14,8 @@ import {
   Plane,
   Wallet,
   CheckSquare,
-  MessageCircle,
   Home,
+  MessagesSquare,
 } from 'lucide-react';
 import { useAppStore } from '../../../stores/useAppStore';
 import { cn } from '../../../lib/utils';
@@ -49,8 +49,8 @@ const navItems: NavItem[] = [
   { label: 'Tarefas', icon: CheckSquare, path: '/pessoal/tarefas', contexts: ['pessoal'] },
 
   // Shared
-  { label: 'AI Assistant', icon: Sparkles, path: '/ai', contexts: ['fiap', 'itau', 'pessoal', 'admin'] },
-  { label: 'WhatsApp', icon: MessageCircle, path: '/whatsapp', contexts: ['fiap', 'itau', 'pessoal', 'admin'] },
+  { label: 'AI Assistant', icon: Sparkles,        path: '/ai',   contexts: ['fiap', 'itau', 'pessoal', 'admin'] },
+  { label: 'Chat Guiado',  icon: MessagesSquare,  path: '/chat', contexts: ['fiap', 'itau', 'pessoal', 'admin'] },
 ];
 
 const modeLabels: Record<string, string> = {
